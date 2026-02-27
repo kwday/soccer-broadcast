@@ -43,9 +43,9 @@
 - [x] 6t. **Test** — Print joystick axis/button values to console, verify crop moves with stick, zoom works with triggers, deadzone filters noise
 - [x] 6c. **Commit** — `git commit -m "step 6: joystick input for pan/tilt/zoom"`
 
-- [ ] 7. **smoother.py** — Exponential moving average on joystick input, smooth snap-to-position animations (~0.5s)
-- [ ] 7t. **Test** — Unit test: feed step input, verify output ramps smoothly. Visual test: snap-to-center animates, no jerky movement
-- [ ] 7c. **Commit** — `git commit -m "step 7: smoother.py - input smoothing"`
+- [x] 7. **smoother.py** — Exponential moving average on joystick input, smooth snap-to-position animations (~0.5s)
+- [x] 7t. **Test** — Unit test: feed step input, verify output ramps smoothly. Visual test: snap-to-center animates, no jerky movement
+- [x] 7c. **Commit** — `git commit -m "step 7: smoother.py - input smoothing"`
 
 - [ ] 8. **scoreboard.py** — Full Pillow renderer matching OBS overlay design (see DESIGN.md scoreboard spec: 60px bar, team colors, gold timer, half indicator, fonts)
 - [ ] 8t. **Test** — Render scoreboard to PNG with sample state, open and visually compare to OBS HTML overlay. Test all states: 0-0, 3-2, half change, visibility toggle
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 6 — joystick input
-**Currently working on:** Step 7 — smoother.py
+**Last completed:** Step 7 — smoother.py
+**Currently working on:** Step 8 — scoreboard.py
 **Blockers/Notes:** (none)

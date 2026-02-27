@@ -160,6 +160,11 @@ class InteractiveViewer:
         self.home_color = self.config.get("home_color", "#1E3A5F")
         self.away_color = self.config.get("away_color", "#8B0000")
 
+        # Input smoother
+        from smoother import InputSmoother
+        smoothing = self.config.get("smoothing_factor", 0.15)
+        self.smoother = InputSmoother(smoothing_factor=smoothing, snap_duration=0.5)
+
         # Logging
         self.log_rows = []
 
@@ -232,16 +237,23 @@ class InteractiveViewer:
             return
 
         # Pan (left stick X)
+        raw_pan = 0.0
         if self.axis_pan < num_axes:
             pan_val = self.joystick.get_axis(self.axis_pan)
             if abs(pan_val) > self.deadzone:
-                self.crop.move(pan_val * self.pan_speed, 0)
+                raw_pan = pan_val * self.pan_speed
 
         # Tilt (left stick Y)
+        raw_tilt = 0.0
         if self.axis_tilt < num_axes:
             tilt_val = self.joystick.get_axis(self.axis_tilt)
             if abs(tilt_val) > self.deadzone:
-                self.crop.move(0, tilt_val * self.tilt_speed)
+                raw_tilt = tilt_val * self.tilt_speed
+
+        # Apply smoothing to stick input
+        smooth_pan, smooth_tilt, _ = self.smoother.smooth_input(raw_pan, raw_tilt, 0)
+        if not self.smoother.is_snapping:
+            self.crop.move(smooth_pan, smooth_tilt)
 
         # Zoom in (ZR trigger)
         if self.axis_zoom_in < num_axes:
@@ -258,27 +270,24 @@ class InteractiveViewer:
                 zoom_amount = (zl_val + 1) / 2 * self.zoom_speed
                 self.crop.adjust_zoom(-zoom_amount)
 
-        # Snap buttons
+        # Snap buttons (with smooth animation)
         if self.button_snap_center < num_buttons and \
                 self.joystick.get_button(self.button_snap_center):
             cx = self.snap_center_x or (self.pano_width / 2)
             cy = self.snap_y or (self.pano_height / 2)
-            self.crop.center_x = cx
-            self.crop.center_y = cy
+            self.smoother.start_snap(self.crop.center_x, self.crop.center_y, cx, cy)
 
         if self.button_snap_left < num_buttons and \
                 self.joystick.get_button(self.button_snap_left):
             cx = self.snap_left_goal_x or (self.pano_width * 0.0625)
             cy = self.snap_y or (self.pano_height / 2)
-            self.crop.center_x = cx
-            self.crop.center_y = cy
+            self.smoother.start_snap(self.crop.center_x, self.crop.center_y, cx, cy)
 
         if self.button_snap_right < num_buttons and \
                 self.joystick.get_button(self.button_snap_right):
             cx = self.snap_right_goal_x or (self.pano_width * 0.9375)
             cy = self.snap_y or (self.pano_height / 2)
-            self.crop.center_x = cx
-            self.crop.center_y = cy
+            self.smoother.start_snap(self.crop.center_x, self.crop.center_y, cx, cy)
 
         if self.button_wide_view < num_buttons and \
                 self.joystick.get_button(self.button_wide_view):
@@ -482,6 +491,12 @@ class InteractiveViewer:
                 keys = pygame.key.get_pressed()
                 self.handle_keyboard(keys)
                 self.handle_joystick()
+
+                # Update snap animation
+                if self.smoother.is_snapping:
+                    x, y, done = self.smoother.get_snap_position()
+                    self.crop.center_x = x
+                    self.crop.center_y = y
 
                 # Draw
                 self.draw_frame(frame)
