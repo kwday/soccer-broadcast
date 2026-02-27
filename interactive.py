@@ -181,6 +181,17 @@ class InteractiveViewer:
 
         self.crop = CropState(self.pano_width, self.pano_height)
 
+        # Initialize scoreboard renderer
+        from scoreboard import ScoreboardRenderer
+        font_path = self.config.get("scoreboard_font", None)
+        mono_font_path = self.config.get("scoreboard_mono_font", None)
+        self.scoreboard_renderer = ScoreboardRenderer(
+            width=self.crop.output_width,
+            height=self.crop.output_height,
+            font_path=font_path,
+            mono_font_path=mono_font_path
+        )
+
     def init_display(self):
         """Initialize pygame display."""
         if not PYGAME_AVAILABLE:
@@ -330,6 +341,21 @@ class InteractiveViewer:
                 elif event.key == pygame.K_t:
                     self.scoreboard_visible = not self.scoreboard_visible
 
+    def get_scoreboard_state(self):
+        """Get the current scoreboard state for rendering."""
+        from scoreboard import ScoreboardState
+        return ScoreboardState(
+            home_team=self.home_team,
+            away_team=self.away_team,
+            home_score=self.home_score,
+            away_score=self.away_score,
+            clock_seconds=int(self.clock_seconds),
+            half=self.half,
+            visible=self.scoreboard_visible,
+            home_color=self.home_color,
+            away_color=self.away_color,
+        )
+
     def draw_frame(self, frame: np.ndarray):
         """Draw the panorama overview and crop preview."""
         if self.screen is None:
@@ -387,6 +413,14 @@ class InteractiveViewer:
                     preview_w = int(target_h * 16 / 9)
 
                 preview = cv2.resize(cropped, (preview_w, target_h))
+
+                # Composite scoreboard onto preview
+                if self.scoreboard_renderer is not None:
+                    sb_state = self.get_scoreboard_state()
+                    preview = self.scoreboard_renderer.composite_onto_frame(
+                        preview, sb_state
+                    )
+
                 preview_rgb = cv2.cvtColor(preview, cv2.COLOR_BGR2RGB)
                 preview_surface = pygame.image.frombuffer(
                     preview_rgb.tobytes(), (preview_w, target_h), "RGB"

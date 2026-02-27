@@ -203,6 +203,90 @@ class TestInteractiveViewer:
         assert viewer.clock_seconds < 1.5
 
 
+class TestScoreboardIntegration:
+    def test_scoreboard_renderer_initialized(self, tmp_path):
+        video_path = make_test_video(tmp_path, num_frames=1)
+        viewer = InteractiveViewer(video_path)
+        viewer.open_video()
+        assert viewer.scoreboard_renderer is not None
+        viewer.cap.release()
+
+    def test_get_scoreboard_state(self, tmp_path):
+        video_path = make_test_video(tmp_path, num_frames=1)
+        viewer = InteractiveViewer(video_path, config={
+            "home_team": "Eagles", "away_team": "Hawks"
+        })
+        viewer.open_video()
+
+        viewer.home_score = 2
+        viewer.away_score = 1
+        viewer.clock_seconds = 45.0
+        viewer.half = 2
+
+        state = viewer.get_scoreboard_state()
+        assert state.home_team == "Eagles"
+        assert state.away_team == "Hawks"
+        assert state.home_score == 2
+        assert state.away_score == 1
+        assert state.clock_seconds == 45
+        assert state.half == 2
+        assert state.visible is True
+
+        viewer.cap.release()
+
+    def test_scoreboard_state_changes_in_log(self, tmp_path):
+        """Verify score changes appear in log at correct frames."""
+        video_path = make_test_video(tmp_path, num_frames=10)
+        viewer = InteractiveViewer(video_path)
+
+        # Run 3 frames, then change score, run 3 more
+        viewer.open_video()
+        viewer.running = True
+
+        # Process frames manually in headless mode
+        for i in range(10):
+            ret, frame = viewer.cap.read()
+            if not ret:
+                break
+            if i == 3:
+                viewer.home_score = 1
+            if i == 6:
+                viewer.away_score = 1
+            timestamp = i / viewer.fps
+            if viewer.clock_running:
+                viewer.clock_seconds += 1.0 / viewer.fps
+            viewer.log_frame(timestamp)
+            viewer.current_frame += 1
+
+        viewer.cap.release()
+
+        # Verify score changes in log
+        assert viewer.log_rows[2]["home_score"] == 0
+        assert viewer.log_rows[3]["home_score"] == 1
+        assert viewer.log_rows[5]["away_score"] == 0
+        assert viewer.log_rows[6]["away_score"] == 1
+
+    def test_visibility_toggle_in_log(self, tmp_path):
+        video_path = make_test_video(tmp_path, num_frames=5)
+        viewer = InteractiveViewer(video_path)
+        viewer.open_video()
+        viewer.running = True
+
+        for i in range(5):
+            ret, frame = viewer.cap.read()
+            if not ret:
+                break
+            if i == 2:
+                viewer.scoreboard_visible = False
+            viewer.log_frame(i / viewer.fps)
+            viewer.current_frame += 1
+
+        viewer.cap.release()
+
+        assert viewer.log_rows[1]["scoreboard_visible"] == "true"
+        assert viewer.log_rows[2]["scoreboard_visible"] == "false"
+
+
 class TestJoystickConfig:
     def test_default_controller_mapping(self, tmp_path):
         video_path = make_test_video(tmp_path, num_frames=1)

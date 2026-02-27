@@ -51,9 +51,9 @@
 - [x] 8t. **Test** — Render scoreboard to PNG with sample state, open and visually compare to OBS HTML overlay. Test all states: 0-0, 3-2, half change, visibility toggle
 - [x] 8c. **Commit** — `git commit -m "step 8: scoreboard.py - Pillow scoreboard renderer"`
 
-- [ ] 9. **Add scoreboard to interactive** — Keyboard events (Space, Q/A, P/L, H, R, T) update score/clock/half state, composite Pillow scoreboard onto pygame preview
-- [ ] 9t. **Test** — Launch interactive, press each key, verify score increments/decrements, clock starts/stops/resets, half switches and resets clock, scoreboard toggles visibility
-- [ ] 9c. **Commit** — `git commit -m "step 9: scoreboard keyboard controls in interactive"`
+- [x] 9. **Add scoreboard to interactive** — Keyboard events (Space, Q/A, P/L, H, R, T) update score/clock/half state, composite Pillow scoreboard onto pygame preview
+- [x] 9t. **Test** — Launch interactive, press each key, verify score increments/decrements, clock starts/stops/resets, half switches and resets clock, scoreboard toggles visibility
+- [x] 9c. **Commit** — `git commit -m "step 9: scoreboard keyboard controls in interactive"`
 
 - [ ] 10. **Add logging** — Write CSV log every frame (frame, timestamp, crop coords, score, clock, half, visibility)
 - [ ] 10t. **Test** — Run short interactive session, verify CSV file written, verify column count, verify timestamps increment, verify score changes appear at correct frames
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 8 — scoreboard.py
-**Currently working on:** Step 9 — scoreboard in interactive
+**Last completed:** Step 9 — scoreboard in interactive
+**Currently working on:** Step 10 — CSV frame logging
 **Blockers/Notes:** (none)
