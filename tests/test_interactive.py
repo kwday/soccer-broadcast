@@ -203,5 +203,60 @@ class TestInteractiveViewer:
         assert viewer.clock_seconds < 1.5
 
 
+class TestJoystickConfig:
+    def test_default_controller_mapping(self, tmp_path):
+        video_path = make_test_video(tmp_path, num_frames=1)
+        viewer = InteractiveViewer(video_path)
+
+        assert viewer.axis_pan == 0
+        assert viewer.axis_tilt == 1
+        assert viewer.axis_zoom_in == 5
+        assert viewer.axis_zoom_out == 4
+        assert viewer.button_snap_center == 1
+        assert viewer.button_snap_left == 0
+        assert viewer.button_snap_right == 3
+        assert viewer.button_wide_view == 2
+        assert viewer.deadzone == 0.10
+
+    def test_custom_controller_mapping(self, tmp_path):
+        video_path = make_test_video(tmp_path, num_frames=1)
+        config = {
+            "controller": {
+                "axis_pan": 2,
+                "axis_tilt": 3,
+                "deadzone": 0.15,
+            }
+        }
+        viewer = InteractiveViewer(video_path, config=config)
+        assert viewer.axis_pan == 2
+        assert viewer.axis_tilt == 3
+        assert viewer.deadzone == 0.15
+        # Defaults for unspecified
+        assert viewer.axis_zoom_in == 5
+
+    def test_snap_positions_from_config(self, tmp_path):
+        video_path = make_test_video(tmp_path, num_frames=1)
+        config = {
+            "snap_center_x": 4000,
+            "snap_left_goal_x": 500,
+            "snap_right_goal_x": 7500,
+            "snap_y": 1494,
+        }
+        viewer = InteractiveViewer(video_path, config=config)
+        assert viewer.snap_center_x == 4000
+        assert viewer.snap_left_goal_x == 500
+        assert viewer.snap_right_goal_x == 7500
+        assert viewer.snap_y == 1494
+
+    def test_joystick_handle_without_controller(self, tmp_path):
+        """handle_joystick should not crash when no controller is connected."""
+        video_path = make_test_video(tmp_path, num_frames=1)
+        viewer = InteractiveViewer(video_path)
+        viewer.open_video()
+        # joystick is None, should not raise
+        viewer.handle_joystick()
+        viewer.cap.release()
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -125,6 +125,25 @@ class InteractiveViewer:
 
         # Joystick (initialized later)
         self.joystick = None
+        self.debug_controller = self.config.get("debug_controller", False)
+
+        # Controller mapping (configurable via config)
+        ctrl = self.config.get("controller", {})
+        self.axis_pan = ctrl.get("axis_pan", 0)
+        self.axis_tilt = ctrl.get("axis_tilt", 1)
+        self.axis_zoom_in = ctrl.get("axis_zoom_in", 5)
+        self.axis_zoom_out = ctrl.get("axis_zoom_out", 4)
+        self.button_snap_center = ctrl.get("button_snap_center", 1)
+        self.button_snap_left = ctrl.get("button_snap_left", 0)
+        self.button_snap_right = ctrl.get("button_snap_right", 3)
+        self.button_wide_view = ctrl.get("button_wide_view", 2)
+        self.deadzone = ctrl.get("deadzone", 0.10)
+
+        # Snap positions
+        self.snap_center_x = self.config.get("snap_center_x", None)
+        self.snap_left_goal_x = self.config.get("snap_left_goal_x", None)
+        self.snap_right_goal_x = self.config.get("snap_right_goal_x", None)
+        self.snap_y = self.config.get("snap_y", None)
 
         # Scoreboard state
         self.home_score = 0
@@ -199,6 +218,80 @@ class InteractiveViewer:
             self.crop.adjust_zoom(self.zoom_speed)
         if keys[pygame.K_MINUS]:
             self.crop.adjust_zoom(-self.zoom_speed)
+
+    def handle_joystick(self):
+        """Handle joystick/controller input for pan/tilt/zoom."""
+        if self.joystick is None:
+            return
+
+        # Read axes
+        try:
+            num_axes = self.joystick.get_numaxes()
+            num_buttons = self.joystick.get_numbuttons()
+        except pygame.error:
+            return
+
+        # Pan (left stick X)
+        if self.axis_pan < num_axes:
+            pan_val = self.joystick.get_axis(self.axis_pan)
+            if abs(pan_val) > self.deadzone:
+                self.crop.move(pan_val * self.pan_speed, 0)
+
+        # Tilt (left stick Y)
+        if self.axis_tilt < num_axes:
+            tilt_val = self.joystick.get_axis(self.axis_tilt)
+            if abs(tilt_val) > self.deadzone:
+                self.crop.move(0, tilt_val * self.tilt_speed)
+
+        # Zoom in (ZR trigger)
+        if self.axis_zoom_in < num_axes:
+            zr_val = self.joystick.get_axis(self.axis_zoom_in)
+            # Triggers go from -1 (released) to 1 (fully pressed)
+            if zr_val > -0.5:
+                zoom_amount = (zr_val + 1) / 2 * self.zoom_speed
+                self.crop.adjust_zoom(zoom_amount)
+
+        # Zoom out (ZL trigger)
+        if self.axis_zoom_out < num_axes:
+            zl_val = self.joystick.get_axis(self.axis_zoom_out)
+            if zl_val > -0.5:
+                zoom_amount = (zl_val + 1) / 2 * self.zoom_speed
+                self.crop.adjust_zoom(-zoom_amount)
+
+        # Snap buttons
+        if self.button_snap_center < num_buttons and \
+                self.joystick.get_button(self.button_snap_center):
+            cx = self.snap_center_x or (self.pano_width / 2)
+            cy = self.snap_y or (self.pano_height / 2)
+            self.crop.center_x = cx
+            self.crop.center_y = cy
+
+        if self.button_snap_left < num_buttons and \
+                self.joystick.get_button(self.button_snap_left):
+            cx = self.snap_left_goal_x or (self.pano_width * 0.0625)
+            cy = self.snap_y or (self.pano_height / 2)
+            self.crop.center_x = cx
+            self.crop.center_y = cy
+
+        if self.button_snap_right < num_buttons and \
+                self.joystick.get_button(self.button_snap_right):
+            cx = self.snap_right_goal_x or (self.pano_width * 0.9375)
+            cy = self.snap_y or (self.pano_height / 2)
+            self.crop.center_x = cx
+            self.crop.center_y = cy
+
+        if self.button_wide_view < num_buttons and \
+                self.joystick.get_button(self.button_wide_view):
+            if self.crop.zoom != 0:
+                self.crop.zoom = 0
+            else:
+                self.crop.zoom = 1.0
+
+        # Debug output
+        if self.debug_controller:
+            axes = [f"{self.joystick.get_axis(i):+.2f}" for i in range(num_axes)]
+            buttons = [str(self.joystick.get_button(i)) for i in range(num_buttons)]
+            print(f"Axes: [{', '.join(axes)}]  Buttons: [{', '.join(buttons)}]", end="\r")
 
     def handle_events(self):
         """Handle pygame events."""
@@ -388,6 +481,7 @@ class InteractiveViewer:
                 self.handle_events()
                 keys = pygame.key.get_pressed()
                 self.handle_keyboard(keys)
+                self.handle_joystick()
 
                 # Draw
                 self.draw_frame(frame)
@@ -421,7 +515,11 @@ def main():
     parser.add_argument("--log-output", default=None, help="Log file path")
     args = parser.parse_args()
 
-    viewer = InteractiveViewer(args.video)
+    config = {}
+    if args.debug_controller:
+        config["debug_controller"] = True
+
+    viewer = InteractiveViewer(args.video, config=config)
     viewer.run()
     viewer.save_log(args.log_output)
 

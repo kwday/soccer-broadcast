@@ -39,9 +39,9 @@
 - [x] 5t. **Test** — Opens window, displays video frames, crop rectangle visible, arrow keys or mouse move crop, Escape quits cleanly
 - [x] 5c. **Commit** — `git commit -m "step 5: interactive.py - video display with crop rect"`
 
-- [ ] 6. **Add joystick** — Read Switch Pro Controller via pygame, move crop window with left stick, zoom with triggers
-- [ ] 6t. **Test** — Print joystick axis/button values to console, verify crop moves with stick, zoom works with triggers, deadzone filters noise
-- [ ] 6c. **Commit** — `git commit -m "step 6: joystick input for pan/tilt/zoom"`
+- [x] 6. **Add joystick** — Read Switch Pro Controller via pygame, move crop window with left stick, zoom with triggers
+- [x] 6t. **Test** — Print joystick axis/button values to console, verify crop moves with stick, zoom works with triggers, deadzone filters noise
+- [x] 6c. **Commit** — `git commit -m "step 6: joystick input for pan/tilt/zoom"`
 
 - [ ] 7. **smoother.py** — Exponential moving average on joystick input, smooth snap-to-position animations (~0.5s)
 - [ ] 7t. **Test** — Unit test: feed step input, verify output ramps smoothly. Visual test: snap-to-center animates, no jerky movement
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 5 — interactive.py (video display)
-**Currently working on:** Step 6 — joystick input
+**Last completed:** Step 6 — joystick input
+**Currently working on:** Step 7 — smoother.py
 **Blockers/Notes:** (none)
