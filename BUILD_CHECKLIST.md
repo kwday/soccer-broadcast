@@ -89,9 +89,9 @@
 - [x] 17t. **Test** — Set team names/colors, launch interactive, verify settings pass through, verify summary appears after pygame closes
 - [x] 17c. **Commit** — `git commit -m "step 17: interactive setup page"`
 
-- [ ] 18. **pages/3_Render.py** — Pre-render summary (score, duration), time estimate, progress bar, output file path
-- [ ] 18t. **Test** — Verify summary reads from log correctly, run render, verify progress bar, verify output path shown
-- [ ] 18c. **Commit** — `git commit -m "step 18: render page"`
+- [x] 18. **pages/3_Render.py** — Pre-render summary (score, duration), time estimate, progress bar, output file path
+- [x] 18t. **Test** — Verify summary reads from log correctly, run render, verify progress bar, verify output path shown
+- [x] 18c. **Commit** — `git commit -m "step 18: render page"`
 
 - [ ] 19. **Streamlit integration test** — Full workflow through Streamlit: stitch → interactive → render
 - [ ] 19c. **Commit** — `git commit -m "step 19: phase 4 streamlit integration test passed"`
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 17 — Interactive setup page
-**Currently working on:** Step 18 — Render page
+**Last completed:** Step 18 — Render page
+**Currently working on:** Step 19 — Streamlit integration test
 **Blockers/Notes:** (none)
