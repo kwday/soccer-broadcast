@@ -22,9 +22,9 @@
 - [x] 1t. **Test** — Run on two sample images with known overlap, verify homography output, verify JSON file is written with correct structure
 - [x] 1c. **Commit** — `git commit -m "step 1: calibrate.py - per-game stitch calibration"`
 
-- [ ] 2. **sync_audio.py** — Fallback audio cross-correlation (extract audio via ffmpeg, scipy cross-correlate, output offset in seconds)
-- [ ] 2t. **Test** — Run on two audio files with known offset, verify detected offset matches expected within 1 frame
-- [ ] 2c. **Commit** — `git commit -m "step 2: sync_audio.py - fallback audio sync"`
+- [x] 2. **sync_audio.py** — Fallback audio cross-correlation (extract audio via ffmpeg, scipy cross-correlate, output offset in seconds)
+- [x] 2t. **Test** — Run on two audio files with known offset, verify detected offset matches expected within 1 frame
+- [x] 2c. **Commit** — `git commit -m "step 2: sync_audio.py - fallback audio sync"`
 
 - [ ] 3. **stitch.py** — Auto-detect timecode vs audio sync, load per-game calibration, batch warp+blend all frames, output stitched panorama video
 - [ ] 3t. **Test** — Run on short clip pair (~10 seconds), verify output video exists, verify resolution matches expected panorama dimensions, spot-check stitch seam visually
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 1 — calibrate.py
-**Currently working on:** Step 2 — sync_audio.py
+**Last completed:** Step 2 — sync_audio.py
+**Currently working on:** Step 3 — stitch.py
 **Blockers/Notes:** (none)
