@@ -31,6 +31,24 @@ def format_duration(seconds):
     return f"{m}:{s:02d}"
 
 
+def open_file_dialog(title="Select Video File"):
+    """Open a native file dialog and return the selected path."""
+    import tkinter as tk
+    from tkinter import filedialog
+    root = tk.Tk()
+    root.withdraw()
+    root.wm_attributes("-topmost", 1)
+    path = filedialog.askopenfilename(
+        title=title,
+        filetypes=[
+            ("Video files", "*.mp4 *.MP4 *.mov *.MOV *.avi *.AVI *.mkv *.MKV"),
+            ("All files", "*.*"),
+        ]
+    )
+    root.destroy()
+    return path if path else None
+
+
 def display_video_metadata(path, label):
     """Display video file metadata in a card."""
     try:
@@ -78,21 +96,27 @@ def main():
     st.title("Calibrate + Stitch")
     st.markdown("Select left and right camera files, then calibrate and stitch into a panorama.")
 
-    # File selection
+    # File selection with browse buttons
     col1, col2 = st.columns(2)
     with col1:
-        left_path = st.text_input("Left Camera Video Path",
-                                  value=st.session_state.get("left_video_path", ""),
-                                  placeholder="C:\\path\\to\\left.mp4")
-    with col2:
-        right_path = st.text_input("Right Camera Video Path",
-                                   value=st.session_state.get("right_video_path", ""),
-                                   placeholder="C:\\path\\to\\right.mp4")
+        st.markdown("**Left Camera**")
+        if st.button("Browse...", key="browse_left"):
+            path = open_file_dialog("Select Left Camera Video")
+            if path:
+                st.session_state["left_video_path"] = path
+        left_path = st.session_state.get("left_video_path", "")
+        if left_path:
+            st.markdown(f"`{left_path}`")
 
-    if left_path:
-        st.session_state["left_video_path"] = left_path
-    if right_path:
-        st.session_state["right_video_path"] = right_path
+    with col2:
+        st.markdown("**Right Camera**")
+        if st.button("Browse...", key="browse_right"):
+            path = open_file_dialog("Select Right Camera Video")
+            if path:
+                st.session_state["right_video_path"] = path
+        right_path = st.session_state.get("right_video_path", "")
+        if right_path:
+            st.markdown(f"`{right_path}`")
 
     # Metadata display
     left_info = None
@@ -121,13 +145,30 @@ def main():
 
         st.markdown("---")
 
-        # Output path
+        # Output folder
         config = load_config()
-        default_output = os.path.join(
+        default_folder = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "output", "match_stitched.mp4"
+            "output"
         )
-        output_path = st.text_input("Output Path", value=default_output)
+        if "stitch_output_folder" not in st.session_state:
+            st.session_state["stitch_output_folder"] = default_folder
+
+        st.markdown("**Output Folder**")
+        if st.button("Browse...", key="browse_output"):
+            import tkinter as tk
+            from tkinter import filedialog
+            root = tk.Tk()
+            root.withdraw()
+            root.wm_attributes("-topmost", 1)
+            folder = filedialog.askdirectory(title="Select Output Folder")
+            root.destroy()
+            if folder:
+                st.session_state["stitch_output_folder"] = folder
+        st.markdown(f"`{st.session_state['stitch_output_folder']}`")
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        output_path = os.path.join(st.session_state["stitch_output_folder"], f"match_stitched_{timestamp}.mp4")
 
         # Stitch button
         if st.button("Calibrate + Stitch", type="primary"):

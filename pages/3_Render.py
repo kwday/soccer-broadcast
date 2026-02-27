@@ -18,6 +18,23 @@ from app import render_sidebar, load_config
 from render import render_broadcast, mux_audio
 
 
+def open_file_dialog(title="Select File", filetypes=None):
+    """Open a native file dialog and return the selected path."""
+    import tkinter as tk
+    from tkinter import filedialog
+    root = tk.Tk()
+    root.withdraw()
+    root.wm_attributes("-topmost", 1)
+    if filetypes is None:
+        filetypes = [
+            ("Video files", "*.mp4 *.MP4 *.mov *.MOV *.avi *.AVI *.mkv *.MKV"),
+            ("All files", "*.*"),
+        ]
+    path = filedialog.askopenfilename(title=title, filetypes=filetypes)
+    root.destroy()
+    return path if path else None
+
+
 def read_log_summary(log_path):
     """Read log and return summary info for pre-render display."""
     if not os.path.exists(log_path):
@@ -63,18 +80,30 @@ def main():
     config = load_config()
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    # Input paths
-    stitched_path = st.text_input(
-        "Stitched Video Path",
-        value=st.session_state.get("stitched_path", ""),
-        placeholder="output/match_stitched.mp4"
-    )
+    # Input paths with browse buttons
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Stitched Video**")
+        if st.button("Browse...", key="browse_stitched"):
+            path = open_file_dialog("Select Stitched Video")
+            if path:
+                st.session_state["stitched_path"] = path
+        stitched_path = st.session_state.get("stitched_path", "")
+        if stitched_path:
+            st.markdown(f"`{stitched_path}`")
 
-    log_path = st.text_input(
-        "Session Log Path",
-        value=st.session_state.get("log_path", ""),
-        placeholder="logs/match.csv"
-    )
+    with col2:
+        st.markdown("**Session Log**")
+        if st.button("Browse...", key="browse_log"):
+            path = open_file_dialog("Select Session Log", filetypes=[
+                ("CSV files", "*.csv *.CSV"),
+                ("All files", "*.*"),
+            ])
+            if path:
+                st.session_state["log_path"] = path
+        log_path = st.session_state.get("log_path", "")
+        if log_path:
+            st.markdown(f"`{log_path}`")
 
     # Validate inputs
     stitched_ok = stitched_path and os.path.exists(stitched_path)
@@ -126,15 +155,31 @@ def main():
         output_height = st.number_input("Height", value=config.get("output_height", 1080),
                                         min_value=360, max_value=2160, step=90)
 
-    default_output = os.path.join(base_dir, "output", "match_broadcast_1080p.mp4")
-    output_path = st.text_input("Output Path", value=default_output)
+    if "render_output_folder" not in st.session_state:
+        st.session_state["render_output_folder"] = os.path.join(base_dir, "output")
 
-    # Audio source (optional)
-    audio_source = st.text_input(
-        "Audio Source (optional)",
-        value=st.session_state.get("left_video_path", ""),
-        help="Path to audio source file (e.g., left camera video for ambient audio)"
-    )
+    st.markdown("**Output Folder**")
+    if st.button("Browse...", key="browse_render_output"):
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.wm_attributes("-topmost", 1)
+        folder = filedialog.askdirectory(title="Select Output Folder")
+        root.destroy()
+        if folder:
+            st.session_state["render_output_folder"] = folder
+    st.markdown(f"`{st.session_state['render_output_folder']}`")
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    output_path = os.path.join(st.session_state["render_output_folder"], f"match_broadcast_{timestamp}.mp4")
+
+    # Audio source — automatically uses left camera file from Stage 1
+    audio_source = st.session_state.get("left_video_path", "")
+    if audio_source and os.path.exists(audio_source):
+        st.markdown(f"**Audio source:** `{os.path.basename(audio_source)}` (left camera)")
+    else:
+        st.info("Audio: select left camera video in Stage 1 (Stitch) to include audio in final output.")
 
     st.markdown("---")
 

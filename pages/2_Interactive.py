@@ -17,6 +17,23 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app import render_sidebar, load_config
 
 
+def open_file_dialog(title="Select File", filetypes=None):
+    """Open a native file dialog and return the selected path."""
+    import tkinter as tk
+    from tkinter import filedialog
+    root = tk.Tk()
+    root.withdraw()
+    root.wm_attributes("-topmost", 1)
+    if filetypes is None:
+        filetypes = [
+            ("Video files", "*.mp4 *.MP4 *.mov *.MOV *.avi *.AVI *.mkv *.MKV"),
+            ("All files", "*.*"),
+        ]
+    path = filedialog.askopenfilename(title=title, filetypes=filetypes)
+    root.destroy()
+    return path if path else None
+
+
 def get_session_summary(log_path):
     """Parse a session log and return summary stats."""
     if not os.path.exists(log_path):
@@ -89,7 +106,7 @@ def main():
 
     config = load_config()
 
-    # Check for stitched video
+    # Stitched video — auto-populated from Stage 1
     stitched_path = st.session_state.get("stitched_path", "")
     if not stitched_path:
         default_stitched = os.path.join(
@@ -98,16 +115,12 @@ def main():
         )
         if os.path.exists(default_stitched):
             stitched_path = default_stitched
+            st.session_state["stitched_path"] = stitched_path
 
-    stitched_path = st.text_input(
-        "Stitched Video Path",
-        value=stitched_path,
-        placeholder="output/match_stitched.mp4"
-    )
-
-    if stitched_path and not os.path.exists(stitched_path):
-        st.warning(f"Stitched video not found: {stitched_path}")
-        st.info("Complete Stage 1 (Stitch) first, or enter the path to a stitched video.")
+    if stitched_path and os.path.exists(stitched_path):
+        st.markdown(f"**Stitched video:** `{os.path.basename(stitched_path)}`")
+    else:
+        st.warning("No stitched video found. Complete Stage 1 (Stitch) first.")
 
     st.markdown("---")
 
@@ -141,8 +154,9 @@ def main():
 
     # Log output path
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    default_log = os.path.join(base_dir, "logs", "match.csv")
-    log_output = st.text_input("Session Log Output Path", value=default_log)
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    log_output = os.path.join(base_dir, "logs", f"match_{timestamp}.csv")
 
     # Launch button
     if st.button("Launch Interactive Session", type="primary",
