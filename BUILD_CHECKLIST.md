@@ -93,8 +93,8 @@
 - [x] 18t. **Test** — Verify summary reads from log correctly, run render, verify progress bar, verify output path shown
 - [x] 18c. **Commit** — `git commit -m "step 18: render page"`
 
-- [ ] 19. **Streamlit integration test** — Full workflow through Streamlit: stitch → interactive → render
-- [ ] 19c. **Commit** — `git commit -m "step 19: phase 4 streamlit integration test passed"`
+- [x] 19. **Streamlit integration test** — Full workflow through Streamlit: stitch → interactive → render
+- [x] 19c. **Commit** — `git commit -m "step 19: phase 4 streamlit integration test passed"`
 
 ## Phase 5: Polish
 
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 18 — Render page
-**Currently working on:** Step 19 — Streamlit integration test
+**Last completed:** Step 19 — Streamlit integration test
+**Currently working on:** Step 20 — config.yaml finalization
 **Blockers/Notes:** (none)
