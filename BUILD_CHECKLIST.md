@@ -98,8 +98,8 @@
 
 ## Phase 5: Polish
 
-- [ ] 20. **config.yaml** — Verify all defaults work, document each setting with comments
-- [ ] 20c. **Commit** — `git commit -m "step 20: config.yaml finalized"`
+- [x] 20. **config.yaml** — Verify all defaults work, document each setting with comments
+- [x] 20c. **Commit** — `git commit -m "step 20: config.yaml finalized"`
 
 - [ ] 21. **Error handling** — Joystick disconnect recovery, end-of-video handling, missing files, failed calibration graceful fallback
 - [ ] 21t. **Test** — Simulate each error condition, verify app doesn't crash, verify user sees helpful message
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 19 — Streamlit integration test
-**Currently working on:** Step 20 — config.yaml finalization
+**Last completed:** Step 20 — config.yaml finalized
+**Currently working on:** Step 21 — Error handling
 **Blockers/Notes:** (none)
