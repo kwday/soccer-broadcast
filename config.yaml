@@ -1,0 +1,43 @@
+# Team settings (defaults — can be overridden per-match in Streamlit)
+home_team: "Eagles"
+away_team: "Hawks"
+home_color: "#1E3A5F"         # dark blue (hex)
+away_color: "#8B0000"         # dark red (hex)
+
+# Video settings
+output_width: 1920
+output_height: 1080
+output_fps: 30
+output_crf: 18
+
+# Joystick settings (Nintendo Switch Pro Controller)
+# Button/axis indices may vary — run interactive.py with --debug-controller to check yours
+controller:
+  axis_pan: 0              # Left stick X
+  axis_tilt: 1             # Left stick Y
+  axis_zoom_in: 5          # ZR (right trigger)
+  axis_zoom_out: 4         # ZL (left trigger)
+  button_snap_center: 1    # B button (bottom)
+  button_snap_left: 0      # A button (right)
+  button_snap_right: 3     # Y button (left)
+  button_wide_view: 2      # X button (top)
+  deadzone: 0.10           # ignore stick input below this threshold
+
+pan_speed: 5.0            # pixels per frame at full stick deflection
+tilt_speed: 3.0
+zoom_speed: 0.02          # zoom factor change per frame at full trigger
+min_zoom: 0               # 0 = full panorama (letterboxed, 2.68:1 aspect ratio)
+max_zoom: 1.2             # 20% upscale max — crop = 1600x900, no visible quality loss
+smoothing_factor: 0.15    # exponential smoothing (0 = no smoothing, 1 = frozen)
+
+# Snap positions (in panorama pixel coordinates)
+snap_center_x: 4000       # center of ~8000px panorama (adjust after seeing stitched output)
+snap_left_goal_x: 500
+snap_right_goal_x: 7500
+snap_y: 1494              # vertical center of 2988px panorama
+
+# Scoreboard
+scoreboard_position: "bottom"  # "top" or "bottom"
+scoreboard_offset: 50          # pixels from top/bottom edge
+scoreboard_font: "assets/fonts/arial.ttf"
+scoreboard_mono_font: "assets/fonts/cour.ttf"

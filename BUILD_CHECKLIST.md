@@ -77,9 +77,9 @@
 
 ## Phase 4: Streamlit UI
 
-- [ ] 15. **app.py** — Streamlit entry point, sidebar with match status (date, teams, ✓/✗ per stage)
-- [ ] 15t. **Test** — `streamlit run app.py` launches, sidebar displays, status checkmarks reflect file existence
-- [ ] 15c. **Commit** — `git commit -m "step 15: app.py - streamlit shell with sidebar"`
+- [x] 15. **app.py** — Streamlit entry point, sidebar with match status (date, teams, ✓/✗ per stage)
+- [x] 15t. **Test** — `streamlit run app.py` launches, sidebar displays, status checkmarks reflect file existence
+- [x] 15c. **Commit** — `git commit -m "step 15: app.py - streamlit shell with sidebar"`
 
 - [ ] 16. **pages/1_Stitch.py** — File pickers, metadata display, timecode vs audio sync detection, time estimate, progress bar, stitch preview thumbnail after completion
 - [ ] 16t. **Test** — Select files, verify metadata displays correctly, run stitch, verify progress bar updates, verify thumbnail appears
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 14 — phase 3 end-to-end test
-**Currently working on:** Step 15 — Streamlit app.py
+**Last completed:** Step 15 — app.py Streamlit shell
+**Currently working on:** Step 16 — Stitch page
 **Blockers/Notes:** (none)
