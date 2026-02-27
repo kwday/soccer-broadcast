@@ -26,9 +26,9 @@
 - [x] 2t. **Test** — Run on two audio files with known offset, verify detected offset matches expected within 1 frame
 - [x] 2c. **Commit** — `git commit -m "step 2: sync_audio.py - fallback audio sync"`
 
-- [ ] 3. **stitch.py** — Auto-detect timecode vs audio sync, load per-game calibration, batch warp+blend all frames, output stitched panorama video
-- [ ] 3t. **Test** — Run on short clip pair (~10 seconds), verify output video exists, verify resolution matches expected panorama dimensions, spot-check stitch seam visually
-- [ ] 3c. **Commit** — `git commit -m "step 3: stitch.py - batch panorama stitching"`
+- [x] 3. **stitch.py** — Auto-detect timecode vs audio sync, load per-game calibration, batch warp+blend all frames, output stitched panorama video
+- [x] 3t. **Test** — Run on short clip pair (~10 seconds), verify output video exists, verify resolution matches expected panorama dimensions, spot-check stitch seam visually
+- [x] 3c. **Commit** — `git commit -m "step 3: stitch.py - batch panorama stitching"`
 
 - [ ] 4. **Integration test** — Run full Phase 1 pipeline on sample clips (calibrate → sync → stitch), verify end-to-end output
 - [ ] 4c. **Commit** — `git commit -m "step 4: phase 1 integration test passed"`
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 2 — sync_audio.py
-**Currently working on:** Step 3 — stitch.py
+**Last completed:** Step 3 — stitch.py
+**Currently working on:** Step 4 — Phase 1 integration test
 **Blockers/Notes:** (none)
