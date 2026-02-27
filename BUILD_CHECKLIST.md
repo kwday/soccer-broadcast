@@ -101,9 +101,9 @@
 - [x] 20. **config.yaml** — Verify all defaults work, document each setting with comments
 - [x] 20c. **Commit** — `git commit -m "step 20: config.yaml finalized"`
 
-- [ ] 21. **Error handling** — Joystick disconnect recovery, end-of-video handling, missing files, failed calibration graceful fallback
-- [ ] 21t. **Test** — Simulate each error condition, verify app doesn't crash, verify user sees helpful message
-- [ ] 21c. **Commit** — `git commit -m "step 21: error handling"`
+- [x] 21. **Error handling** — Joystick disconnect recovery, end-of-video handling, missing files, failed calibration graceful fallback
+- [x] 21t. **Test** — Simulate each error condition, verify app doesn't crash, verify user sees helpful message
+- [x] 21c. **Commit** — `git commit -m "step 21: error handling"`
 
 - [ ] 22. **requirements.txt** — Pin versions, verify clean install in fresh venv
 - [ ] 22t. **Test** — `pip install -r requirements.txt` in clean venv, run `streamlit run app.py`, verify launches
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 20 — config.yaml finalized
-**Currently working on:** Step 21 — Error handling
+**Last completed:** Step 21 — Error handling
+**Currently working on:** Step 22 — requirements.txt
 **Blockers/Notes:** (none)

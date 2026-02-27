@@ -22,9 +22,18 @@ from scoreboard import ScoreboardRenderer, ScoreboardState
 
 def read_log(log_path: str) -> list:
     """Read the session log CSV and return a list of row dicts."""
+    if not os.path.exists(log_path):
+        raise FileNotFoundError(f"Log file not found: {log_path}")
     with open(log_path) as f:
         reader = csv.DictReader(f)
-        return list(reader)
+        rows = list(reader)
+    if not rows:
+        raise ValueError(f"Log file is empty: {log_path}")
+    required = ["crop_x", "crop_y", "crop_w", "crop_h"]
+    missing = [c for c in required if c not in rows[0]]
+    if missing:
+        raise ValueError(f"Log file missing required columns: {missing}")
+    return rows
 
 
 def render_broadcast(video_path: str, log_path: str, output_path: str,
@@ -89,70 +98,87 @@ def render_broadcast(video_path: str, log_path: str, output_path: str,
     print(f"Rendering to {output_path} ({output_width}x{output_height} @ {output_fps}fps)...")
 
     frame_num = 0
-    for row in log_rows:
-        # Read source frame
-        ret, frame = cap.read()
-        if not ret:
-            print(f"  Warning: source video ended at frame {frame_num}")
-            break
+    try:
+        for row in log_rows:
+            # Read source frame
+            ret, frame = cap.read()
+            if not ret:
+                print(f"  Warning: source video ended at frame {frame_num}/{total_frames}")
+                break
 
-        # Parse crop parameters
-        crop_x = int(row["crop_x"])
-        crop_y = int(row["crop_y"])
-        crop_w = int(row["crop_w"])
-        crop_h = int(row["crop_h"])
+            # Parse crop parameters with validation
+            try:
+                crop_x = int(row["crop_x"])
+                crop_y = int(row["crop_y"])
+                crop_w = int(row["crop_w"])
+                crop_h = int(row["crop_h"])
+            except (ValueError, KeyError) as e:
+                print(f"  Warning: bad crop data at frame {frame_num}: {e}, skipping")
+                frame_num += 1
+                continue
 
-        # Clamp to source bounds
-        crop_x = max(0, min(crop_x, pano_width - crop_w))
-        crop_y = max(0, min(crop_y, pano_height - crop_h))
-        crop_w = min(crop_w, pano_width - crop_x)
-        crop_h = min(crop_h, pano_height - crop_y)
+            # Clamp to source bounds
+            crop_x = max(0, min(crop_x, pano_width - crop_w))
+            crop_y = max(0, min(crop_y, pano_height - crop_h))
+            crop_w = min(crop_w, pano_width - crop_x)
+            crop_h = min(crop_h, pano_height - crop_y)
 
-        # Crop
-        cropped = frame[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w]
+            # Validate crop dimensions
+            if crop_w <= 0 or crop_h <= 0:
+                print(f"  Warning: invalid crop at frame {frame_num}, using full frame")
+                crop_x, crop_y = 0, 0
+                crop_w, crop_h = pano_width, pano_height
 
-        # Handle letterboxing for full panorama view (zoom=0)
-        if crop_w == pano_width and crop_h == pano_height:
-            # Scale to fit width, letterbox vertically
-            scale = output_width / crop_w
-            scaled_h = int(crop_h * scale)
-            scaled = cv2.resize(cropped, (output_width, scaled_h))
+            # Crop
+            cropped = frame[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w]
 
-            # Center in output frame with black bars
-            output_frame = np.zeros((output_height, output_width, 3), dtype=np.uint8)
-            y_offset = (output_height - scaled_h) // 2
-            output_frame[y_offset:y_offset + scaled_h] = scaled
-        else:
-            # Normal crop: resize to output dimensions
-            output_frame = cv2.resize(cropped, (output_width, output_height))
+            # Handle letterboxing for full panorama view (zoom=0)
+            if crop_w == pano_width and crop_h == pano_height:
+                # Scale to fit width, letterbox vertically
+                scale = output_width / crop_w
+                scaled_h = int(crop_h * scale)
+                scaled = cv2.resize(cropped, (output_width, scaled_h))
 
-        # Composite scoreboard
-        scoreboard_visible = row.get("scoreboard_visible", "true") == "true"
-        state = ScoreboardState(
-            home_team=home_team,
-            away_team=away_team,
-            home_score=int(row.get("home_score", 0)),
-            away_score=int(row.get("away_score", 0)),
-            clock_seconds=int(row.get("clock_seconds", 0)),
-            half=int(row.get("half", 1)),
-            visible=scoreboard_visible,
-            home_color=home_color,
-            away_color=away_color,
-        )
-        output_frame = renderer.composite_onto_frame(output_frame, state)
+                # Center in output frame with black bars
+                output_frame = np.zeros((output_height, output_width, 3), dtype=np.uint8)
+                y_offset = (output_height - scaled_h) // 2
+                output_frame[y_offset:y_offset + scaled_h] = scaled
+            else:
+                # Normal crop: resize to output dimensions
+                output_frame = cv2.resize(cropped, (output_width, output_height))
 
-        # Write frame
-        writer.write(output_frame)
-        frame_num += 1
+            # Composite scoreboard
+            try:
+                scoreboard_visible = row.get("scoreboard_visible", "true") == "true"
+                state = ScoreboardState(
+                    home_team=home_team,
+                    away_team=away_team,
+                    home_score=int(row.get("home_score", 0)),
+                    away_score=int(row.get("away_score", 0)),
+                    clock_seconds=int(row.get("clock_seconds", 0)),
+                    half=int(row.get("half", 1)),
+                    visible=scoreboard_visible,
+                    home_color=home_color,
+                    away_color=away_color,
+                )
+                output_frame = renderer.composite_onto_frame(output_frame, state)
+            except (ValueError, Exception) as e:
+                # If scoreboard fails, write frame without it
+                if frame_num == 0:
+                    print(f"  Warning: scoreboard error: {e}")
 
-        if progress_callback:
-            progress_callback(frame_num, total_frames)
-        elif frame_num % 100 == 0 or frame_num == 1:
-            pct = frame_num / max(total_frames, 1) * 100
-            print(f"  Frame {frame_num}/{total_frames} ({pct:.1f}%)")
+            # Write frame
+            writer.write(output_frame)
+            frame_num += 1
 
-    cap.release()
-    writer.release()
+            if progress_callback:
+                progress_callback(frame_num, total_frames)
+            elif frame_num % 100 == 0 or frame_num == 1:
+                pct = frame_num / max(total_frames, 1) * 100
+                print(f"  Frame {frame_num}/{total_frames} ({pct:.1f}%)")
+    finally:
+        cap.release()
+        writer.release()
 
     print(f"Render complete: {frame_num} frames written to {output_path}")
     return output_path

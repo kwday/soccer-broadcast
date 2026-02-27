@@ -219,9 +219,24 @@ def stitch_videos(left_path: str, right_path: str,
                              frame_index=0)
         cal_path = os.path.join("calibrations", f"{cal_date}_cal.json")
 
+    # Validate calibration data
+    required_keys = ["homography", "canvas_width", "canvas_height",
+                     "blend_x_start", "blend_x_end", "offset_x", "offset_y"]
+    missing = [k for k in required_keys if k not in cal_data]
+    if missing:
+        raise ValueError(f"Calibration file missing required keys: {missing}")
+
     H = np.array(cal_data["homography"], dtype=np.float64)
+    if H.shape != (3, 3):
+        raise ValueError(f"Homography must be 3x3, got {H.shape}")
+    if np.any(np.isnan(H)) or np.any(np.isinf(H)):
+        raise ValueError("Homography contains NaN or Inf values")
+
     canvas_w = cal_data["canvas_width"]
     canvas_h = cal_data["canvas_height"]
+    if canvas_w <= 0 or canvas_h <= 0:
+        raise ValueError(f"Invalid canvas dimensions: {canvas_w}x{canvas_h}")
+
     blend_start = cal_data["blend_x_start"]
     blend_end = cal_data["blend_x_end"]
     offset_x = cal_data["offset_x"]
@@ -266,32 +281,36 @@ def stitch_videos(left_path: str, right_path: str,
     print(f"Output: {canvas_w}x{canvas_h}")
 
     frame_num = 0
-    while True:
-        ret_left, frame_left = cap_left.read()
-        ret_right, frame_right = cap_right.read()
+    try:
+        while True:
+            ret_left, frame_left = cap_left.read()
+            ret_right, frame_right = cap_right.read()
 
-        if not ret_left or not ret_right:
-            break
+            if not ret_left or not ret_right:
+                if frame_num < total_frames:
+                    which = "left" if not ret_left else "right"
+                    print(f"  Warning: {which} video ended at frame {frame_num}/{total_frames}")
+                break
 
-        stitched = stitch_frame(
-            frame_left, frame_right,
-            H, canvas_w, canvas_h,
-            offset_x, offset_y,
-            blend_start, blend_end
-        )
+            stitched = stitch_frame(
+                frame_left, frame_right,
+                H, canvas_w, canvas_h,
+                offset_x, offset_y,
+                blend_start, blend_end
+            )
 
-        writer.write(stitched)
-        frame_num += 1
+            writer.write(stitched)
+            frame_num += 1
 
-        if progress_callback:
-            progress_callback(frame_num, total_frames)
-        elif frame_num % 100 == 0 or frame_num == 1:
-            pct = frame_num / max(total_frames, 1) * 100
-            print(f"  Frame {frame_num}/{total_frames} ({pct:.1f}%)")
-
-    cap_left.release()
-    cap_right.release()
-    writer.release()
+            if progress_callback:
+                progress_callback(frame_num, total_frames)
+            elif frame_num % 100 == 0 or frame_num == 1:
+                pct = frame_num / max(total_frames, 1) * 100
+                print(f"  Frame {frame_num}/{total_frames} ({pct:.1f}%)")
+    finally:
+        cap_left.release()
+        cap_right.release()
+        writer.release()
 
     print(f"Stitching complete: {frame_num} frames written to {output_path}")
     return output_path

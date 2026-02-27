@@ -235,83 +235,103 @@ class InteractiveViewer:
         if keys[pygame.K_MINUS]:
             self.crop.adjust_zoom(-self.zoom_speed)
 
+    def _try_reconnect_joystick(self):
+        """Attempt to reconnect a disconnected joystick."""
+        self.joystick = None
+        try:
+            pygame.joystick.quit()
+            pygame.joystick.init()
+            if pygame.joystick.get_count() > 0:
+                self.joystick = pygame.joystick.Joystick(0)
+                self.joystick.init()
+                print(f"Controller reconnected: {self.joystick.get_name()}")
+        except pygame.error:
+            pass
+
     def handle_joystick(self):
         """Handle joystick/controller input for pan/tilt/zoom."""
         if self.joystick is None:
             return
 
-        # Read axes
+        # Read axes — wrap all joystick calls in try/except for disconnect recovery
         try:
             num_axes = self.joystick.get_numaxes()
             num_buttons = self.joystick.get_numbuttons()
         except pygame.error:
+            # Joystick disconnected — try to re-detect
+            self._try_reconnect_joystick()
             return
 
-        # Pan (left stick X)
-        raw_pan = 0.0
-        if self.axis_pan < num_axes:
-            pan_val = self.joystick.get_axis(self.axis_pan)
-            if abs(pan_val) > self.deadzone:
-                raw_pan = pan_val * self.pan_speed
+        try:
+            # Pan (left stick X)
+            raw_pan = 0.0
+            if self.axis_pan < num_axes:
+                pan_val = self.joystick.get_axis(self.axis_pan)
+                if abs(pan_val) > self.deadzone:
+                    raw_pan = pan_val * self.pan_speed
 
-        # Tilt (left stick Y)
-        raw_tilt = 0.0
-        if self.axis_tilt < num_axes:
-            tilt_val = self.joystick.get_axis(self.axis_tilt)
-            if abs(tilt_val) > self.deadzone:
-                raw_tilt = tilt_val * self.tilt_speed
+            # Tilt (left stick Y)
+            raw_tilt = 0.0
+            if self.axis_tilt < num_axes:
+                tilt_val = self.joystick.get_axis(self.axis_tilt)
+                if abs(tilt_val) > self.deadzone:
+                    raw_tilt = tilt_val * self.tilt_speed
 
-        # Apply smoothing to stick input
-        smooth_pan, smooth_tilt, _ = self.smoother.smooth_input(raw_pan, raw_tilt, 0)
-        if not self.smoother.is_snapping:
-            self.crop.move(smooth_pan, smooth_tilt)
+            # Apply smoothing to stick input
+            smooth_pan, smooth_tilt, _ = self.smoother.smooth_input(raw_pan, raw_tilt, 0)
+            if not self.smoother.is_snapping:
+                self.crop.move(smooth_pan, smooth_tilt)
 
-        # Zoom in (ZR trigger)
-        if self.axis_zoom_in < num_axes:
-            zr_val = self.joystick.get_axis(self.axis_zoom_in)
-            # Triggers go from -1 (released) to 1 (fully pressed)
-            if zr_val > -0.5:
-                zoom_amount = (zr_val + 1) / 2 * self.zoom_speed
-                self.crop.adjust_zoom(zoom_amount)
+            # Zoom in (ZR trigger)
+            if self.axis_zoom_in < num_axes:
+                zr_val = self.joystick.get_axis(self.axis_zoom_in)
+                # Triggers go from -1 (released) to 1 (fully pressed)
+                if zr_val > -0.5:
+                    zoom_amount = (zr_val + 1) / 2 * self.zoom_speed
+                    self.crop.adjust_zoom(zoom_amount)
 
-        # Zoom out (ZL trigger)
-        if self.axis_zoom_out < num_axes:
-            zl_val = self.joystick.get_axis(self.axis_zoom_out)
-            if zl_val > -0.5:
-                zoom_amount = (zl_val + 1) / 2 * self.zoom_speed
-                self.crop.adjust_zoom(-zoom_amount)
+            # Zoom out (ZL trigger)
+            if self.axis_zoom_out < num_axes:
+                zl_val = self.joystick.get_axis(self.axis_zoom_out)
+                if zl_val > -0.5:
+                    zoom_amount = (zl_val + 1) / 2 * self.zoom_speed
+                    self.crop.adjust_zoom(-zoom_amount)
 
-        # Snap buttons (with smooth animation)
-        if self.button_snap_center < num_buttons and \
-                self.joystick.get_button(self.button_snap_center):
-            cx = self.snap_center_x or (self.pano_width / 2)
-            cy = self.snap_y or (self.pano_height / 2)
-            self.smoother.start_snap(self.crop.center_x, self.crop.center_y, cx, cy)
+            # Snap buttons (with smooth animation)
+            if self.button_snap_center < num_buttons and \
+                    self.joystick.get_button(self.button_snap_center):
+                cx = self.snap_center_x or (self.pano_width / 2)
+                cy = self.snap_y or (self.pano_height / 2)
+                self.smoother.start_snap(self.crop.center_x, self.crop.center_y, cx, cy)
 
-        if self.button_snap_left < num_buttons and \
-                self.joystick.get_button(self.button_snap_left):
-            cx = self.snap_left_goal_x or (self.pano_width * 0.0625)
-            cy = self.snap_y or (self.pano_height / 2)
-            self.smoother.start_snap(self.crop.center_x, self.crop.center_y, cx, cy)
+            if self.button_snap_left < num_buttons and \
+                    self.joystick.get_button(self.button_snap_left):
+                cx = self.snap_left_goal_x or (self.pano_width * 0.0625)
+                cy = self.snap_y or (self.pano_height / 2)
+                self.smoother.start_snap(self.crop.center_x, self.crop.center_y, cx, cy)
 
-        if self.button_snap_right < num_buttons and \
-                self.joystick.get_button(self.button_snap_right):
-            cx = self.snap_right_goal_x or (self.pano_width * 0.9375)
-            cy = self.snap_y or (self.pano_height / 2)
-            self.smoother.start_snap(self.crop.center_x, self.crop.center_y, cx, cy)
+            if self.button_snap_right < num_buttons and \
+                    self.joystick.get_button(self.button_snap_right):
+                cx = self.snap_right_goal_x or (self.pano_width * 0.9375)
+                cy = self.snap_y or (self.pano_height / 2)
+                self.smoother.start_snap(self.crop.center_x, self.crop.center_y, cx, cy)
 
-        if self.button_wide_view < num_buttons and \
-                self.joystick.get_button(self.button_wide_view):
-            if self.crop.zoom != 0:
-                self.crop.zoom = 0
-            else:
-                self.crop.zoom = 1.0
+            if self.button_wide_view < num_buttons and \
+                    self.joystick.get_button(self.button_wide_view):
+                if self.crop.zoom != 0:
+                    self.crop.zoom = 0
+                else:
+                    self.crop.zoom = 1.0
 
-        # Debug output
-        if self.debug_controller:
-            axes = [f"{self.joystick.get_axis(i):+.2f}" for i in range(num_axes)]
-            buttons = [str(self.joystick.get_button(i)) for i in range(num_buttons)]
-            print(f"Axes: [{', '.join(axes)}]  Buttons: [{', '.join(buttons)}]", end="\r")
+            # Debug output
+            if self.debug_controller:
+                axes = [f"{self.joystick.get_axis(i):+.2f}" for i in range(num_axes)]
+                buttons = [str(self.joystick.get_button(i)) for i in range(num_buttons)]
+                print(f"Axes: [{', '.join(axes)}]  Buttons: [{', '.join(buttons)}]", end="\r")
+
+        except pygame.error:
+            # Joystick disconnected mid-read — try to reconnect
+            self._try_reconnect_joystick()
 
     def handle_events(self):
         """Handle pygame events."""
@@ -465,6 +485,7 @@ class InteractiveViewer:
     def save_log(self, output_path: str = None):
         """Save the session log to CSV."""
         if not self.log_rows:
+            print("No frames logged — nothing to save.")
             return
 
         if output_path is None:
@@ -479,12 +500,16 @@ class InteractiveViewer:
             "half", "scoreboard_visible"
         ]
 
-        with open(output_path, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(self.log_rows)
+        try:
+            os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+            with open(output_path, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(self.log_rows)
+            print(f"Log saved: {output_path} ({len(self.log_rows)} frames)")
+        except OSError as e:
+            print(f"Error saving log to {output_path}: {e}")
 
-        print(f"Log saved: {output_path} ({len(self.log_rows)} frames)")
         return output_path
 
     def run(self, headless: bool = False, max_frames: int = None):
@@ -505,55 +530,58 @@ class InteractiveViewer:
         frame_duration = 1.0 / self.fps
         clock_tick_rate = 1.0 / self.fps
 
-        while self.running:
-            frame_start = time.time()
+        try:
+            while self.running:
+                frame_start = time.time()
 
-            # Read frame
-            ret, frame = self.cap.read()
-            if not ret:
-                break
+                # Read frame
+                ret, frame = self.cap.read()
+                if not ret:
+                    if self.current_frame < self.total_frames:
+                        print(f"  Video ended at frame {self.current_frame}/{self.total_frames}")
+                    break
 
-            timestamp = self.current_frame / self.fps
+                timestamp = self.current_frame / self.fps
 
-            # Update clock
-            if self.clock_running:
-                self.clock_seconds += clock_tick_rate
+                # Update clock
+                if self.clock_running:
+                    self.clock_seconds += clock_tick_rate
 
-            if not headless:
-                # Handle input
-                self.handle_events()
-                keys = pygame.key.get_pressed()
-                self.handle_keyboard(keys)
-                self.handle_joystick()
+                if not headless:
+                    # Handle input
+                    self.handle_events()
+                    keys = pygame.key.get_pressed()
+                    self.handle_keyboard(keys)
+                    self.handle_joystick()
 
-                # Update snap animation
-                if self.smoother.is_snapping:
-                    x, y, done = self.smoother.get_snap_position()
-                    self.crop.center_x = x
-                    self.crop.center_y = y
+                    # Update snap animation
+                    if self.smoother.is_snapping:
+                        x, y, done = self.smoother.get_snap_position()
+                        self.crop.center_x = x
+                        self.crop.center_y = y
 
-                # Draw
-                self.draw_frame(frame)
+                    # Draw
+                    self.draw_frame(frame)
 
-            # Log
-            self.log_frame(timestamp)
+                # Log
+                self.log_frame(timestamp)
 
-            self.current_frame += 1
+                self.current_frame += 1
 
-            if max_frames and self.current_frame >= max_frames:
-                break
+                if max_frames and self.current_frame >= max_frames:
+                    break
 
-            # Frame timing
-            if not headless:
-                elapsed = time.time() - frame_start
-                sleep_time = frame_duration - elapsed
-                if sleep_time > 0:
-                    time.sleep(sleep_time)
-
-        # Cleanup
-        self.cap.release()
-        if not headless and PYGAME_AVAILABLE:
-            pygame.quit()
+                # Frame timing
+                if not headless:
+                    elapsed = time.time() - frame_start
+                    sleep_time = frame_duration - elapsed
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
+        finally:
+            # Cleanup — always release resources
+            self.cap.release()
+            if not headless and PYGAME_AVAILABLE:
+                pygame.quit()
 
 
 def main():
