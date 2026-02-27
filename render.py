@@ -158,6 +158,104 @@ def render_broadcast(video_path: str, log_path: str, output_path: str,
     return output_path
 
 
+def _get_ffmpeg_path() -> str:
+    """Find a working ffmpeg executable."""
+    import shutil
+
+    # Try imageio-ffmpeg first (standalone binary, most reliable)
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except ImportError:
+        pass
+
+    # Try system ffmpeg
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg:
+        return ffmpeg
+
+    return "ffmpeg"  # Fallback, let it fail with a clear error
+
+
+def _get_ffprobe_path() -> str:
+    """Find a working ffprobe executable."""
+    import shutil
+
+    # Try imageio-ffmpeg directory (ffprobe is usually alongside ffmpeg)
+    try:
+        import imageio_ffmpeg
+        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+        ffprobe = ffmpeg_path.replace("ffmpeg", "ffprobe")
+        if os.path.exists(ffprobe):
+            return ffprobe
+    except ImportError:
+        pass
+
+    ffprobe = shutil.which("ffprobe")
+    if ffprobe:
+        return ffprobe
+
+    return "ffprobe"
+
+
+def mux_audio(video_path: str, audio_source: str, output_path: str) -> str:
+    """
+    Mux audio from a source file into the rendered video using ffmpeg.
+
+    Args:
+        video_path: Path to the rendered video (no audio).
+        audio_source: Path to audio source (typically left camera file).
+        output_path: Path for the final output with audio.
+
+    Returns:
+        Path to the output file.
+    """
+    import subprocess
+    import tempfile
+
+    print(f"Muxing audio from {audio_source}...")
+
+    ffmpeg = _get_ffmpeg_path()
+
+    # Use a temp file for the intermediate step
+    temp_output = output_path + ".tmp.mp4"
+
+    cmd = [
+        ffmpeg, "-y",
+        "-i", video_path,      # video stream
+        "-i", audio_source,    # audio source
+        "-c:v", "libx264",     # re-encode video as H.264 for compatibility
+        "-preset", "fast",
+        "-crf", "18",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "aac",         # encode audio as AAC
+        "-b:a", "192k",
+        "-map", "0:v:0",       # take video from first input
+        "-map", "1:a:0",       # take audio from second input
+        "-shortest",           # stop when shorter stream ends
+        temp_output
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if result.returncode != 0:
+        error_msg = result.stderr or result.stdout or "(no output)"
+        print(f"  Warning: ffmpeg mux failed (code {result.returncode}): {error_msg[:500]}")
+        # If mux fails, just return the video-only file
+        return video_path
+
+    # Replace original with muxed version
+    if os.path.exists(temp_output):
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        os.rename(temp_output, output_path)
+        print(f"Audio muxed: {output_path}")
+    else:
+        print("  Warning: muxed file not created, using video-only output")
+        return video_path
+
+    return output_path
+
+
 def main():
     parser = argparse.ArgumentParser(description="Final broadcast encoder")
     parser.add_argument("--video", required=True, help="Stitched panoramic video")
@@ -168,6 +266,8 @@ def main():
     parser.add_argument("--away-team", default="AWAY")
     parser.add_argument("--home-color", default="#1E5E3A")
     parser.add_argument("--away-color", default="#5E1E1E")
+    parser.add_argument("--audio", default=None,
+                        help="Audio source file (e.g., left camera video)")
     parser.add_argument("--width", type=int, default=1920)
     parser.add_argument("--height", type=int, default=1080)
     parser.add_argument("--fps", type=float, default=30.0)
@@ -180,6 +280,9 @@ def main():
         output_width=args.width, output_height=args.height,
         output_fps=args.fps
     )
+
+    if args.audio:
+        mux_audio(args.output, args.audio, args.output)
 
 
 if __name__ == "__main__":

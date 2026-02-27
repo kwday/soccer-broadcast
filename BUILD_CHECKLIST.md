@@ -68,9 +68,9 @@
 - [x] 12t. **Test** — Render from a known log CSV, verify output is 1920x1080, verify frame count matches log rows, verify scoreboard visible in output frames, spot-check crop positions
 - [x] 12c. **Commit** — `git commit -m "step 12: render.py - final broadcast encoder"`
 
-- [ ] 13. **Add audio** — Extract audio from left camera source, mux into final output via ffmpeg
-- [ ] 13t. **Test** — Verify final MP4 has audio track, verify audio duration matches video duration, play back and verify sync
-- [ ] 13c. **Commit** — `git commit -m "step 13: audio mux into final output"`
+- [x] 13. **Add audio** — Extract audio from left camera source, mux into final output via ffmpeg
+- [x] 13t. **Test** — Verify final MP4 has audio track, verify audio duration matches video duration, play back and verify sync
+- [x] 13c. **Commit** — `git commit -m "step 13: audio mux into final output"`
 
 - [ ] 14. **End-to-end test** — Full pipeline: stitch → interactive → render → watch final output
 - [ ] 14c. **Commit** — `git commit -m "step 14: phase 3 end-to-end test passed"`
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 12 — render.py
-**Currently working on:** Step 13 — audio mux
+**Last completed:** Step 13 — audio mux
+**Currently working on:** Step 14 — end-to-end test
 **Blockers/Notes:** (none)
