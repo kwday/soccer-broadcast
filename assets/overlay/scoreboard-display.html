@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard Display</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            background: transparent;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Scoreboard Bar */
+        .scoreboard-bar {
+            position: fixed;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            background: linear-gradient(to bottom, rgba(44,44,44,0.95) 0%, rgba(26,26,26,0.95) 100%);
+            border: 2px solid rgba(68,68,68,0.8);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            height: 60px;
+            min-width: 600px;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        .scoreboard-bar.hidden {
+            display: none;
+        }
+
+        .scoreboard-bar.top {
+            bottom: auto;
+            top: 50px;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        /* Team Sections */
+        .team-section {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            position: relative;
+        }
+
+        .team-section.home {
+            background: linear-gradient(to bottom, rgba(30,94,58,0.9) 0%, rgba(22,68,41,0.9) 100%);
+            border-right: 3px solid #333;
+        }
+
+        .team-section.away {
+            background: linear-gradient(to bottom, rgba(58,30,30,0.9) 0%, rgba(41,22,22,0.9) 100%);
+            border-left: 3px solid #333;
+        }
+
+        .team-logo {
+            width: 45px;
+            height: 45px;
+            background: rgba(255,255,255,0.15);
+            margin: 0 10px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .team-name {
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            padding: 0 15px;
+            min-width: 100px;
+            color: white;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.8);
+        }
+
+        .score-box {
+            background: rgba(0,0,0,0.4);
+            padding: 0 20px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            min-width: 60px;
+            border-left: 2px solid #333;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        /* Timer Section */
+        .timer-section {
+            background: linear-gradient(to bottom, rgba(68,68,68,0.9) 0%, rgba(34,34,34,0.9) 100%);
+            padding: 0 20px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 100px;
+            border-left: 2px solid #555;
+            border-right: 2px solid #555;
+        }
+
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            color: #ffd700;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.8);
+            letter-spacing: 2px;
+        }
+
+        .half-indicator {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #aaa;
+            margin-top: 2px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .scoreboard-bar {
+                min-width: 500px;
+                height: 50px;
+            }
+            
+            .team-name {
+                font-size: 14px;
+                padding: 0 10px;
+                min-width: 80px;
+            }
+            
+            .score-box {
+                font-size: 24px;
+                padding: 0 15px;
+            }
+            
+            .timer {
+                font-size: 20px;
+            }
+
+            .team-logo {
+                width: 35px;
+                height: 35px;
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Scoreboard Bar (Display Only) -->
+    <div class="scoreboard-bar" id="scoreboardBar">
+        <!-- Home Team -->
+        <div class="team-section home">
+            <div class="team-logo" id="homeLogo">H</div>
+            <div class="team-name" id="homeTeamName">HOME</div>
+            <div class="score-box" id="homeScore">0</div>
+        </div>
+
+        <!-- Timer -->
+        <div class="timer-section">
+            <div class="timer" id="timer">00:00</div>
+            <div class="half-indicator" id="halfIndicator">1ST HALF</div>
+        </div>
+
+        <!-- Away Team -->
+        <div class="team-section away">
+            <div class="score-box" id="awayScore">0</div>
+            <div class="team-name" id="awayTeamName">AWAY</div>
+            <div class="team-logo" id="awayLogo">A</div>
+        </div>
+    </div>
+
+    <script>
+        // This file ONLY displays the scoreboard
+        // It receives updates via BroadcastChannel or localStorage
+        
+        let timerInterval = null;
+        let localSeconds = 0;
+        let currentState = null;
+        
+        // Try to use BroadcastChannel for better local file communication
+        let channel = null;
+        try {
+            channel = new BroadcastChannel('scoreboard_channel');
+            channel.onmessage = function(e) {
+                if (e.data.type === 'update') {
+                    updateFromState(e.data.state);
+                }
+            };
+            console.log('BroadcastChannel connected');
+        } catch (e) {
+            console.log('BroadcastChannel not available, using localStorage polling');
+        }
+
+        function updateFromState(state) {
+            try {
+                currentState = state;
+                
+                // Update team names and logos
+                document.getElementById('homeTeamName').textContent = state.homeTeam.toUpperCase();
+                document.getElementById('homeLogo').textContent = state.homeInitial;
+                document.getElementById('awayTeamName').textContent = state.awayTeam.toUpperCase();
+                document.getElementById('awayLogo').textContent = state.awayInitial;
+                
+                // Update scores
+                document.getElementById('homeScore').textContent = state.homeScore;
+                document.getElementById('awayScore').textContent = state.awayScore;
+                
+                // Update half
+                document.getElementById('halfIndicator').textContent = 
+                    state.currentHalf === 1 ? '1ST HALF' : '2ND HALF';
+                
+                // Handle timer
+                if (state.isRunning && !timerInterval) {
+                    // Start local timer
+                    localSeconds = state.seconds;
+                    timerInterval = setInterval(updateLocalTimer, 1000);
+                } else if (!state.isRunning && timerInterval) {
+                    // Stop local timer
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    localSeconds = state.seconds;
+                    updateTimerDisplay();
+                } else if (!state.isRunning) {
+                    localSeconds = state.seconds;
+                    updateTimerDisplay();
+                }
+                
+                // Update position
+                const bar = document.getElementById('scoreboardBar');
+                if (state.position === 'top') {
+                    bar.classList.add('top');
+                } else {
+                    bar.classList.remove('top');
+                }
+                
+                // Update visibility
+                if (state.visible === false) {
+                    bar.classList.add('hidden');
+                } else {
+                    bar.classList.remove('hidden');
+                }
+                
+            } catch (e) {
+                console.error('Error updating display:', e);
+            }
+        }
+
+        function updateLocalTimer() {
+            localSeconds++;
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(localSeconds / 60);
+            const seconds = localSeconds % 60;
+            document.getElementById('timer').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // Fallback: Poll localStorage if BroadcastChannel is not available
+        if (!channel) {
+            let lastUpdate = 0;
+            setInterval(function() {
+                try {
+                    const data = localStorage.getItem('scoreboardData');
+                    if (data) {
+                        const state = JSON.parse(data);
+                        if (state.lastUpdate && state.lastUpdate !== lastUpdate) {
+                            lastUpdate = state.lastUpdate;
+                            updateFromState(state);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error reading localStorage:', e);
+                }
+            }, 100);
+        }
+        
+        // Initial load from localStorage
+        try {
+            const data = localStorage.getItem('scoreboardData');
+            if (data) {
+                updateFromState(JSON.parse(data));
+            }
+        } catch (e) {
+            console.error('Error on initial load:', e);
+        }
+    </script>
+</body>
+</html>
