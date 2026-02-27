@@ -64,9 +64,9 @@
 
 ## Phase 3: Render Pipeline
 
-- [ ] 12. **render.py** — Read log CSV, decode stitched video, crop per log, composite scoreboard, encode 1080p output
-- [ ] 12t. **Test** — Render from a known log CSV, verify output is 1920x1080, verify frame count matches log rows, verify scoreboard visible in output frames, spot-check crop positions
-- [ ] 12c. **Commit** — `git commit -m "step 12: render.py - final broadcast encoder"`
+- [x] 12. **render.py** — Read log CSV, decode stitched video, crop per log, composite scoreboard, encode 1080p output
+- [x] 12t. **Test** — Render from a known log CSV, verify output is 1920x1080, verify frame count matches log rows, verify scoreboard visible in output frames, spot-check crop positions
+- [x] 12c. **Commit** — `git commit -m "step 12: render.py - final broadcast encoder"`
 
 - [ ] 13. **Add audio** — Extract audio from left camera source, mux into final output via ffmpeg
 - [ ] 13t. **Test** — Verify final MP4 has audio track, verify audio duration matches video duration, play back and verify sync
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 11 — Phase 2 integration test
-**Currently working on:** Step 12 — render.py
+**Last completed:** Step 12 — render.py
+**Currently working on:** Step 13 — audio mux
 **Blockers/Notes:** (none)
