@@ -30,8 +30,8 @@
 - [x] 3t. **Test** — Run on short clip pair (~10 seconds), verify output video exists, verify resolution matches expected panorama dimensions, spot-check stitch seam visually
 - [x] 3c. **Commit** — `git commit -m "step 3: stitch.py - batch panorama stitching"`
 
-- [ ] 4. **Integration test** — Run full Phase 1 pipeline on sample clips (calibrate → sync → stitch), verify end-to-end output
-- [ ] 4c. **Commit** — `git commit -m "step 4: phase 1 integration test passed"`
+- [x] 4. **Integration test** — Run full Phase 1 pipeline on sample clips (calibrate → sync → stitch), verify end-to-end output
+- [x] 4c. **Commit** — `git commit -m "step 4: phase 1 integration test passed"`
 
 ## Phase 2: Interactive Viewer
 
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 3 — stitch.py
-**Currently working on:** Step 4 — Phase 1 integration test
+**Last completed:** Step 4 — Phase 1 integration test
+**Currently working on:** Step 5 — interactive.py (video display)
 **Blockers/Notes:** (none)
