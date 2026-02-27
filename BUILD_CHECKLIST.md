@@ -35,9 +35,9 @@
 
 ## Phase 2: Interactive Viewer
 
-- [ ] 5. **interactive.py (video only)** — Load stitched video with OpenCV, display in pygame window with crop rectangle overlay
-- [ ] 5t. **Test** — Opens window, displays video frames, crop rectangle visible, arrow keys or mouse move crop, Escape quits cleanly
-- [ ] 5c. **Commit** — `git commit -m "step 5: interactive.py - video display with crop rect"`
+- [x] 5. **interactive.py (video only)** — Load stitched video with OpenCV, display in pygame window with crop rectangle overlay
+- [x] 5t. **Test** — Opens window, displays video frames, crop rectangle visible, arrow keys or mouse move crop, Escape quits cleanly
+- [x] 5c. **Commit** — `git commit -m "step 5: interactive.py - video display with crop rect"`
 
 - [ ] 6. **Add joystick** — Read Switch Pro Controller via pygame, move crop window with left stick, zoom with triggers
 - [ ] 6t. **Test** — Print joystick axis/button values to console, verify crop moves with stick, zoom works with triggers, deadzone filters noise
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 4 — Phase 1 integration test
-**Currently working on:** Step 5 — interactive.py (video display)
+**Last completed:** Step 5 — interactive.py (video display)
+**Currently working on:** Step 6 — joystick input
 **Blockers/Notes:** (none)
