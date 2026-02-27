@@ -81,9 +81,9 @@
 - [x] 15t. **Test** — `streamlit run app.py` launches, sidebar displays, status checkmarks reflect file existence
 - [x] 15c. **Commit** — `git commit -m "step 15: app.py - streamlit shell with sidebar"`
 
-- [ ] 16. **pages/1_Stitch.py** — File pickers, metadata display, timecode vs audio sync detection, time estimate, progress bar, stitch preview thumbnail after completion
-- [ ] 16t. **Test** — Select files, verify metadata displays correctly, run stitch, verify progress bar updates, verify thumbnail appears
-- [ ] 16c. **Commit** — `git commit -m "step 16: stitch page with preview thumbnail"`
+- [x] 16. **pages/1_Stitch.py** — File pickers, metadata display, timecode vs audio sync detection, time estimate, progress bar, stitch preview thumbnail after completion
+- [x] 16t. **Test** — Select files, verify metadata displays correctly, run stitch, verify progress bar updates, verify thumbnail appears
+- [x] 16c. **Commit** — `git commit -m "step 16: stitch page with preview thumbnail"`
 
 - [ ] 17. **pages/2_Interactive.py** — Match setup (team names, colors), controls reference card, launch pygame as subprocess, session summary on return
 - [ ] 17t. **Test** — Set team names/colors, launch interactive, verify settings pass through, verify summary appears after pygame closes
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 15 — app.py Streamlit shell
-**Currently working on:** Step 16 — Stitch page
+**Last completed:** Step 16 — Stitch page
+**Currently working on:** Step 17 — Interactive page
 **Blockers/Notes:** (none)
