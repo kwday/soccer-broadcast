@@ -55,9 +55,9 @@
 - [x] 9t. **Test** — Launch interactive, press each key, verify score increments/decrements, clock starts/stops/resets, half switches and resets clock, scoreboard toggles visibility
 - [x] 9c. **Commit** — `git commit -m "step 9: scoreboard keyboard controls in interactive"`
 
-- [ ] 10. **Add logging** — Write CSV log every frame (frame, timestamp, crop coords, score, clock, half, visibility)
-- [ ] 10t. **Test** — Run short interactive session, verify CSV file written, verify column count, verify timestamps increment, verify score changes appear at correct frames
-- [ ] 10c. **Commit** — `git commit -m "step 10: CSV frame logging"`
+- [x] 10. **Add logging** — Write CSV log every frame (frame, timestamp, crop coords, score, clock, half, visibility)
+- [x] 10t. **Test** — Run short interactive session, verify CSV file written, verify column count, verify timestamps increment, verify score changes appear at correct frames
+- [x] 10c. **Commit** — `git commit -m "step 10: CSV frame logging"`
 
 - [ ] 11. **Integration test** — Run full interactive session on sample stitched video, verify all controls work together, verify log file is complete
 - [ ] 11c. **Commit** — `git commit -m "step 11: phase 2 integration test passed"`
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 9 — scoreboard in interactive
-**Currently working on:** Step 10 — CSV frame logging
+**Last completed:** Step 10 — CSV frame logging
+**Currently working on:** Step 11 — Phase 2 integration test
 **Blockers/Notes:** (none)
