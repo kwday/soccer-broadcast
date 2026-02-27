@@ -85,9 +85,9 @@
 - [x] 16t. **Test** — Select files, verify metadata displays correctly, run stitch, verify progress bar updates, verify thumbnail appears
 - [x] 16c. **Commit** — `git commit -m "step 16: stitch page with preview thumbnail"`
 
-- [ ] 17. **pages/2_Interactive.py** — Match setup (team names, colors), controls reference card, launch pygame as subprocess, session summary on return
-- [ ] 17t. **Test** — Set team names/colors, launch interactive, verify settings pass through, verify summary appears after pygame closes
-- [ ] 17c. **Commit** — `git commit -m "step 17: interactive setup page"`
+- [x] 17. **pages/2_Interactive.py** — Match setup (team names, colors), controls reference card, launch pygame as subprocess, session summary on return
+- [x] 17t. **Test** — Set team names/colors, launch interactive, verify settings pass through, verify summary appears after pygame closes
+- [x] 17c. **Commit** — `git commit -m "step 17: interactive setup page"`
 
 - [ ] 18. **pages/3_Render.py** — Pre-render summary (score, duration), time estimate, progress bar, output file path
 - [ ] 18t. **Test** — Verify summary reads from log correctly, run render, verify progress bar, verify output path shown
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 16 — Stitch page
-**Currently working on:** Step 17 — Interactive page
+**Last completed:** Step 17 — Interactive setup page
+**Currently working on:** Step 18 — Render page
 **Blockers/Notes:** (none)
