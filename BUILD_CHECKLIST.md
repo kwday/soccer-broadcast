@@ -59,8 +59,8 @@
 - [x] 10t. **Test** — Run short interactive session, verify CSV file written, verify column count, verify timestamps increment, verify score changes appear at correct frames
 - [x] 10c. **Commit** — `git commit -m "step 10: CSV frame logging"`
 
-- [ ] 11. **Integration test** — Run full interactive session on sample stitched video, verify all controls work together, verify log file is complete
-- [ ] 11c. **Commit** — `git commit -m "step 11: phase 2 integration test passed"`
+- [x] 11. **Integration test** — Run full interactive session on sample stitched video, verify all controls work together, verify log file is complete
+- [x] 11c. **Commit** — `git commit -m "step 11: phase 2 integration test passed"`
 
 ## Phase 3: Render Pipeline
 
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 10 — CSV frame logging
-**Currently working on:** Step 11 — Phase 2 integration test
+**Last completed:** Step 11 — Phase 2 integration test
+**Currently working on:** Step 12 — render.py
 **Blockers/Notes:** (none)
