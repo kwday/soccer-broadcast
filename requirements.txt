@@ -1,0 +1,16 @@
+# Core dependencies
+opencv-python>=4.8.0
+numpy>=1.24.0
+Pillow>=10.0.0
+pygame>=2.5.0
+scipy>=1.11.0
+PyYAML>=6.0
+
+# Streamlit UI
+streamlit>=1.30.0
+
+# FFmpeg (standalone binary for audio mux)
+imageio-ffmpeg>=0.5.0
+
+# Testing
+pytest>=7.0.0

@@ -105,9 +105,9 @@
 - [x] 21t. **Test** — Simulate each error condition, verify app doesn't crash, verify user sees helpful message
 - [x] 21c. **Commit** — `git commit -m "step 21: error handling"`
 
-- [ ] 22. **requirements.txt** — Pin versions, verify clean install in fresh venv
-- [ ] 22t. **Test** — `pip install -r requirements.txt` in clean venv, run `streamlit run app.py`, verify launches
-- [ ] 22c. **Commit** — `git commit -m "step 22: requirements.txt pinned"`
+- [x] 22. **requirements.txt** — Pin versions, verify clean install in fresh venv
+- [x] 22t. **Test** — `pip install -r requirements.txt` in clean venv, run `streamlit run app.py`, verify launches
+- [x] 22c. **Commit** — `git commit -m "step 22: requirements.txt pinned"`
 
 - [ ] 23. **README.md** — Setup instructions, hardware list, usage walkthrough
 - [ ] 23c. **Commit** — `git commit -m "step 23: README.md - project complete"`
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 21 — Error handling
-**Currently working on:** Step 22 — requirements.txt
+**Last completed:** Step 22 — requirements.txt
+**Currently working on:** Step 23 — README.md
 **Blockers/Notes:** (none)
