@@ -72,8 +72,8 @@
 - [x] 13t. **Test** — Verify final MP4 has audio track, verify audio duration matches video duration, play back and verify sync
 - [x] 13c. **Commit** — `git commit -m "step 13: audio mux into final output"`
 
-- [ ] 14. **End-to-end test** — Full pipeline: stitch → interactive → render → watch final output
-- [ ] 14c. **Commit** — `git commit -m "step 14: phase 3 end-to-end test passed"`
+- [x] 14. **End-to-end test** — Full pipeline: stitch → interactive → render → watch final output
+- [x] 14c. **Commit** — `git commit -m "step 14: phase 3 end-to-end test passed"`
 
 ## Phase 4: Streamlit UI
 
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** Step 13 — audio mux
-**Currently working on:** Step 14 — end-to-end test
+**Last completed:** Step 14 — phase 3 end-to-end test
+**Currently working on:** Step 15 — Streamlit app.py
 **Blockers/Notes:** (none)
