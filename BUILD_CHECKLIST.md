@@ -18,9 +18,9 @@
 
 ## Phase 1: Stitch Pipeline
 
-- [ ] 1. **calibrate.py** — Extract frames from left/right video, SIFT/ORB feature detection on overlap region, compute homography with RANSAC, save to `calibrations/YYYY-MM-DD_cal.json`
-- [ ] 1t. **Test** — Run on two sample images with known overlap, verify homography output, verify JSON file is written with correct structure
-- [ ] 1c. **Commit** — `git commit -m "step 1: calibrate.py - per-game stitch calibration"`
+- [x] 1. **calibrate.py** — Extract frames from left/right video, SIFT/ORB feature detection on overlap region, compute homography with RANSAC, save to `calibrations/YYYY-MM-DD_cal.json`
+- [x] 1t. **Test** — Run on two sample images with known overlap, verify homography output, verify JSON file is written with correct structure
+- [x] 1c. **Commit** — `git commit -m "step 1: calibrate.py - per-game stitch calibration"`
 
 - [ ] 2. **sync_audio.py** — Fallback audio cross-correlation (extract audio via ffmpeg, scipy cross-correlate, output offset in seconds)
 - [ ] 2t. **Test** — Run on two audio files with known offset, verify detected offset matches expected within 1 frame
@@ -115,6 +115,6 @@
 ---
 
 ## Current Status
-**Last completed:** (none)
-**Currently working on:** (not started)
+**Last completed:** Step 1 — calibrate.py
+**Currently working on:** Step 2 — sync_audio.py
 **Blockers/Notes:** (none)
