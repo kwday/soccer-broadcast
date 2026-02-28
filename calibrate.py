@@ -261,6 +261,98 @@ def calibrate(left_path: str, right_path: str,
     return cal_data
 
 
+def calibrate_multi(left_path: str, right_path: str,
+                    cal_date: str = None,
+                    output_dir: str = "calibrations",
+                    overlap_fraction: float = 0.35,
+                    num_candidates: int = 4) -> list:
+    """
+    Try multiple candidate frames and return calibration results sorted
+    by inlier count (best first).
+
+    Args:
+        left_path: Path to left camera video.
+        right_path: Path to right camera video.
+        cal_date: Date string for output filename.
+        output_dir: Directory for calibration files.
+        overlap_fraction: Expected overlap fraction.
+        num_candidates: Number of candidate frames to try.
+
+    Returns:
+        List of calibration data dicts, sorted by num_inliers descending.
+    """
+    if cal_date is None:
+        cal_date = date.today().strftime("%Y-%m-%d")
+
+    # Determine frame count from left video
+    cap = cv2.VideoCapture(left_path)
+    if not cap.isOpened():
+        raise FileNotFoundError(f"Could not open video: {left_path}")
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+
+    if total_frames <= 1:
+        # Image file or single-frame video: fall back to single calibration
+        result = calibrate(left_path, right_path, cal_date, output_dir, 0,
+                           overlap_fraction)
+        return [result]
+
+    # Candidate frames at 10%, 25%, 50%, 75% of duration
+    percentages = [0.10, 0.25, 0.50, 0.75]
+    candidate_indices = [min(int(total_frames * p), total_frames - 1)
+                         for p in percentages[:num_candidates]]
+
+    results = []
+    for idx in candidate_indices:
+        try:
+            img_left = extract_frame(left_path, idx)
+            img_right = extract_frame(right_path, idx)
+
+            pts_left, pts_right = detect_and_match(
+                img_left, img_right, overlap_fraction)
+            H, mask = compute_homography(pts_left, pts_right)
+            num_inliers = int(mask.sum()) if mask is not None else len(pts_left)
+            num_matches = len(pts_left)
+
+            canvas_w, canvas_h, blend_start, blend_end, off_x, off_y = \
+                compute_canvas_and_blend(img_left, img_right, H)
+
+            results.append({
+                "frame_index": idx,
+                "homography": H.tolist(),
+                "canvas_width": canvas_w,
+                "canvas_height": canvas_h,
+                "blend_x_start": blend_start,
+                "blend_x_end": blend_end,
+                "offset_x": off_x,
+                "offset_y": off_y,
+                "num_matches": num_matches,
+                "num_inliers": num_inliers,
+                "inlier_ratio": num_inliers / max(num_matches, 1),
+                "left_resolution": list(img_left.shape[:2]),
+                "right_resolution": list(img_right.shape[:2]),
+                "timecode_offset": 0.0,
+            })
+        except RuntimeError as e:
+            print(f"  Candidate frame {idx} failed: {e}")
+            continue
+
+    if not results:
+        raise RuntimeError("All candidate frames failed calibration")
+
+    # Sort by inlier count (best first)
+    results.sort(key=lambda r: r["num_inliers"], reverse=True)
+
+    # Save best result to disk
+    best = results[0]
+    output_path = os.path.join(output_dir, f"{cal_date}_cal.json")
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(best, f, indent=2)
+
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(description="Per-game stitch calibration")
     parser.add_argument("--left", required=True, help="Left camera video or image")

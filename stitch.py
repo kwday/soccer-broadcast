@@ -188,9 +188,151 @@ def stitch_frame(frame_left: np.ndarray, frame_right: np.ndarray,
     return canvas
 
 
+def precompute_remap(H_adjusted: np.ndarray,
+                     canvas_width: int, canvas_height: int,
+                     offset_x: int, offset_y: int,
+                     left_height: int, left_width: int,
+                     right_height: int, right_width: int,
+                     blend_x_start: int, blend_x_end: int) -> dict:
+    """
+    Precompute remap arrays and static blend masks for the stitch pipeline.
+
+    Call once before the frame loop. The returned dict is passed to
+    stitch_frame_remap() for each frame.
+    """
+    # Inverse homography for remap: canvas coords → right-image coords
+    H_inv = np.linalg.inv(H_adjusted).astype(np.float64)
+
+    # Build coordinate grid for the full canvas
+    xs = np.arange(canvas_width, dtype=np.float64)
+    ys = np.arange(canvas_height, dtype=np.float64)
+    grid_x, grid_y = np.meshgrid(xs, ys)
+
+    denom = H_inv[2, 0] * grid_x + H_inv[2, 1] * grid_y + H_inv[2, 2]
+    remap_x = ((H_inv[0, 0] * grid_x + H_inv[0, 1] * grid_y + H_inv[0, 2])
+               / denom).astype(np.float32)
+    remap_y = ((H_inv[1, 0] * grid_x + H_inv[1, 1] * grid_y + H_inv[1, 2])
+               / denom).astype(np.float32)
+
+    # Left-image placement coordinates
+    left_x = -offset_x
+    left_y = -offset_y
+    y_start = max(0, left_y)
+    y_end = min(canvas_height, left_y + left_height)
+    x_start = max(0, left_x)
+    x_end = min(canvas_width, left_x + left_width)
+    src_y_start = y_start - left_y
+    src_y_end = y_end - left_y
+    src_x_start = x_start - left_x
+    src_x_end = x_end - left_x
+
+    # Static right-valid mask: warp a white image once to find valid pixels
+    white = np.full((right_height, right_width), 255, dtype=np.uint8)
+    warped_mask = cv2.remap(white, remap_x, remap_y, cv2.INTER_LINEAR,
+                            borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+    right_valid = warped_mask > 0
+
+    # Left-valid mask
+    left_valid = np.zeros((canvas_height, canvas_width), dtype=bool)
+    left_valid[y_start:y_end, x_start:x_end] = True
+
+    # Blend region
+    bx0 = max(blend_x_start, 0)
+    bx1 = min(blend_x_end, canvas_width)
+
+    alpha_mask = None
+    blend_both = None
+    blend_right_only = None
+
+    if bx0 < bx1:
+        blend_w = blend_x_end - blend_x_start
+        blend_slice_w = bx1 - bx0
+        alpha_start = (bx0 - blend_x_start) / max(blend_w - 1, 1)
+        alpha_end = (bx1 - 1 - blend_x_start) / max(blend_w - 1, 1)
+        alpha_mask = np.linspace(alpha_start, alpha_end, blend_slice_w,
+                                 dtype=np.float32).reshape(1, -1, 1)
+
+        bl = left_valid[:, bx0:bx1]
+        br = right_valid[:, bx0:bx1]
+        blend_both = (bl & br)[:, :, np.newaxis]
+        blend_right_only = (~bl & br)[:, :, np.newaxis]
+
+    # Fill region (past blend zone)
+    fill_start = max(bx1 if bx0 < bx1 else blend_x_end, 0)
+    fill_mask = None
+    if fill_start < canvas_width:
+        fill_right = right_valid[:, fill_start:]
+        fill_left = left_valid[:, fill_start:]
+        fill_mask = fill_right & ~fill_left
+
+    return {
+        "remap_x": remap_x,
+        "remap_y": remap_y,
+        "alpha_mask": alpha_mask,
+        "blend_both": blend_both,
+        "blend_right_only": blend_right_only,
+        "left_placement": (y_start, y_end, x_start, x_end,
+                           src_y_start, src_y_end, src_x_start, src_x_end),
+        "blend_slice": (bx0, bx1),
+        "fill_start": fill_start,
+        "fill_mask": fill_mask,
+        "canvas_width": canvas_width,
+        "canvas_height": canvas_height,
+    }
+
+
+def stitch_frame_remap(frame_left: np.ndarray, frame_right: np.ndarray,
+                       precomputed: dict) -> np.ndarray:
+    """
+    Stitch a single frame pair using precomputed remap arrays and static masks.
+
+    Much faster than stitch_frame() because all geometry is computed once.
+    """
+    canvas_h = precomputed["canvas_height"]
+    canvas_w = precomputed["canvas_width"]
+
+    # 1. Remap right image (fast pixel lookup — no per-frame homography)
+    warped_right = cv2.remap(frame_right,
+                             precomputed["remap_x"], precomputed["remap_y"],
+                             cv2.INTER_LINEAR,
+                             borderMode=cv2.BORDER_CONSTANT,
+                             borderValue=(0, 0, 0))
+
+    # 2. Place left frame on canvas
+    canvas = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint8)
+    y_s, y_e, x_s, x_e, sy_s, sy_e, sx_s, sx_e = precomputed["left_placement"]
+    canvas[y_s:y_e, x_s:x_e] = frame_left[sy_s:sy_e, sx_s:sx_e]
+
+    # 3. Blend overlap region using precomputed static masks
+    bx0, bx1 = precomputed["blend_slice"]
+    if precomputed["alpha_mask"] is not None and bx0 < bx1:
+        alpha = precomputed["alpha_mask"]
+        both = precomputed["blend_both"]
+        r_only = precomputed["blend_right_only"]
+
+        left_region = canvas[:, bx0:bx1].astype(np.float32)
+        right_region = warped_right[:, bx0:bx1].astype(np.float32)
+
+        blended = left_region.copy()
+        blended = np.where(both,
+                           (1 - alpha) * left_region + alpha * right_region,
+                           blended)
+        blended = np.where(r_only, right_region, blended)
+        canvas[:, bx0:bx1] = blended.astype(np.uint8)
+
+    # 4. Fill right-only region past blend zone
+    fill_start = precomputed["fill_start"]
+    fill_mask = precomputed["fill_mask"]
+    if fill_mask is not None and fill_start < canvas_w:
+        canvas[:, fill_start:][fill_mask] = warped_right[:, fill_start:][fill_mask]
+
+    return canvas
+
+
 def stitch_videos(left_path: str, right_path: str,
                   output_path: str,
                   cal_path: str = None,
+                  cal_data: dict = None,
                   cal_date: str = None,
                   frame_offset: int = 0,
                   progress_callback=None) -> str:
@@ -202,6 +344,7 @@ def stitch_videos(left_path: str, right_path: str,
         right_path: Path to right camera video.
         output_path: Path for output stitched video.
         cal_path: Path to existing calibration file (optional).
+        cal_data: Calibration data dict (optional, takes priority over cal_path).
         cal_date: Date for calibration file naming.
         frame_offset: Frame offset between cameras (right leads by this many frames).
         progress_callback: Optional callback(current_frame, total_frames).
@@ -210,7 +353,9 @@ def stitch_videos(left_path: str, right_path: str,
         Path to the output video.
     """
     # Step 1: Calibration
-    if cal_path and os.path.exists(cal_path):
+    if cal_data is not None:
+        print("Using provided calibration data")
+    elif cal_path and os.path.exists(cal_path):
         print(f"Loading calibration from {cal_path}")
         cal_data = load_calibration(cal_path)
     else:
@@ -278,11 +423,24 @@ def stitch_videos(left_path: str, right_path: str,
     if not writer.isOpened():
         raise RuntimeError(f"Cannot create output video: {output_path}")
 
-    # Precompute the adjusted homography (constant across all frames)
+    # Precompute the adjusted homography and remap data (once)
     T = np.array([[1, 0, -offset_x],
                   [0, 1, -offset_y],
                   [0, 0, 1]], dtype=np.float64)
     H_adjusted = T @ H
+
+    left_h = int(cap_left.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    left_w = int(cap_left.get(cv2.CAP_PROP_FRAME_WIDTH))
+    right_h = int(cap_right.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    right_w = int(cap_right.get(cv2.CAP_PROP_FRAME_WIDTH))
+
+    print("Precomputing remap arrays and blend masks...")
+    precomputed = precompute_remap(
+        H_adjusted, canvas_w, canvas_h,
+        offset_x, offset_y,
+        left_h, left_w, right_h, right_w,
+        blend_start, blend_end
+    )
 
     # Step 4: Process frames
     print(f"Stitching {total_frames} frames at {fps:.1f} fps...")
@@ -300,12 +458,7 @@ def stitch_videos(left_path: str, right_path: str,
                     print(f"  Warning: {which} video ended at frame {frame_num}/{total_frames}")
                 break
 
-            stitched = stitch_frame(
-                frame_left, frame_right,
-                H_adjusted, canvas_w, canvas_h,
-                offset_x, offset_y,
-                blend_start, blend_end
-            )
+            stitched = stitch_frame_remap(frame_left, frame_right, precomputed)
 
             writer.write(stitched)
             frame_num += 1
