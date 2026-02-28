@@ -107,7 +107,7 @@ def load_calibration(cal_path: str) -> dict:
 
 
 def stitch_frame(frame_left: np.ndarray, frame_right: np.ndarray,
-                 H: np.ndarray, canvas_width: int, canvas_height: int,
+                 H_adjusted: np.ndarray, canvas_width: int, canvas_height: int,
                  offset_x: int, offset_y: int,
                  blend_x_start: int, blend_x_end: int) -> np.ndarray:
     """
@@ -116,7 +116,7 @@ def stitch_frame(frame_left: np.ndarray, frame_right: np.ndarray,
     Args:
         frame_left: Left camera frame (BGR).
         frame_right: Right camera frame (BGR).
-        H: 3x3 homography matrix (maps right -> left space).
+        H_adjusted: 3x3 pre-adjusted homography (includes translation offset).
         canvas_width: Output canvas width.
         canvas_height: Output canvas height.
         offset_x: X translation to keep all pixels positive.
@@ -127,13 +127,7 @@ def stitch_frame(frame_left: np.ndarray, frame_right: np.ndarray,
     Returns:
         Stitched panorama frame (BGR).
     """
-    # Translation matrix to shift everything into positive coordinates
-    T = np.array([[1, 0, -offset_x],
-                  [0, 1, -offset_y],
-                  [0, 0, 1]], dtype=np.float64)
-
     # Warp right image into canvas space
-    H_adjusted = T @ H
     warped_right = cv2.warpPerspective(frame_right, H_adjusted,
                                        (canvas_width, canvas_height))
 
@@ -157,30 +151,39 @@ def stitch_frame(frame_left: np.ndarray, frame_right: np.ndarray,
     canvas[y_start:y_end, x_start:x_end] = \
         frame_left[src_y_start:src_y_end, src_x_start:src_x_end]
 
-    # Linear blend in overlap region
-    if blend_x_start < blend_x_end and blend_x_start >= 0:
+    # Linear blend in overlap region (vectorized)
+    bx0 = max(blend_x_start, 0)
+    bx1 = min(blend_x_end, canvas_width)
+    if bx0 < bx1:
         blend_w = blend_x_end - blend_x_start
-        for i in range(blend_w):
-            alpha = i / max(blend_w - 1, 1)
-            x = blend_x_start + i
-            if 0 <= x < canvas_width:
-                left_col = canvas[:, x].astype(np.float32)
-                right_col = warped_right[:, x].astype(np.float32)
+        # Alpha gradient: shape (1, blend_slice_w, 1) for broadcasting
+        blend_slice_w = bx1 - bx0
+        alpha_start = (bx0 - blend_x_start) / max(blend_w - 1, 1)
+        alpha_end = (bx1 - 1 - blend_x_start) / max(blend_w - 1, 1)
+        alpha = np.linspace(alpha_start, alpha_end, blend_slice_w,
+                            dtype=np.float32).reshape(1, -1, 1)
 
-                # Only blend where both have content
-                left_mask = left_col.sum(axis=1) > 0
-                right_mask = right_col.sum(axis=1) > 0
-                both = left_mask & right_mask
+        left_region = canvas[:, bx0:bx1].astype(np.float32)
+        right_region = warped_right[:, bx0:bx1].astype(np.float32)
 
-                blended = left_col.copy()
-                blended[both] = (1 - alpha) * left_col[both] + alpha * right_col[both]
-                blended[~left_mask & right_mask] = right_col[~left_mask & right_mask]
+        left_has = left_region.sum(axis=2, keepdims=True) > 0
+        right_has = right_region.sum(axis=2, keepdims=True) > 0
+        both = left_has & right_has
 
-                canvas[:, x] = blended.astype(np.uint8)
+        blended = left_region.copy()
+        blended = np.where(both,
+                           (1 - alpha) * left_region + alpha * right_region,
+                           blended)
+        blended = np.where(~left_has & right_has, right_region, blended)
+        canvas[:, bx0:bx1] = blended.astype(np.uint8)
 
-    # Fill remaining right-only region
-    right_only_mask = (canvas.sum(axis=2) == 0) & (warped_right.sum(axis=2) > 0)
-    canvas[right_only_mask] = warped_right[right_only_mask]
+    # Fill remaining right-only region (only check past the blend zone)
+    fill_start = max(bx1 if bx0 < bx1 else blend_x_end, 0)
+    if fill_start < canvas_width:
+        c_slice = canvas[:, fill_start:]
+        w_slice = warped_right[:, fill_start:]
+        right_only = (c_slice.sum(axis=2) == 0) & (w_slice.sum(axis=2) > 0)
+        c_slice[right_only] = w_slice[right_only]
 
     return canvas
 
@@ -253,15 +256,11 @@ def stitch_videos(left_path: str, right_path: str,
     total_left = int(cap_left.get(cv2.CAP_PROP_FRAME_COUNT))
     total_right = int(cap_right.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    # Apply frame offset (skip frames on the leading camera)
+    # Apply frame offset (seek past leading frames)
     if frame_offset > 0:
-        # Right started earlier - skip first N frames of right
-        for _ in range(frame_offset):
-            cap_right.read()
+        cap_right.set(cv2.CAP_PROP_POS_FRAMES, frame_offset)
     elif frame_offset < 0:
-        # Left started earlier - skip first N frames of left
-        for _ in range(-frame_offset):
-            cap_left.read()
+        cap_left.set(cv2.CAP_PROP_POS_FRAMES, -frame_offset)
 
     total_frames = min(
         total_left - max(0, -frame_offset),
@@ -270,11 +269,20 @@ def stitch_videos(left_path: str, right_path: str,
 
     # Step 3: Set up output video
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    # Use MJPG — mp4v has a 4096px dimension limit and OpenH264 is
+    # unavailable on this system. MJPG handles large panorama dimensions
+    # reliably; the final render stage re-encodes to H.264 anyway.
+    fourcc = cv2.VideoWriter_fourcc(*"MJPG")
     writer = cv2.VideoWriter(output_path, fourcc, fps, (canvas_w, canvas_h))
 
     if not writer.isOpened():
         raise RuntimeError(f"Cannot create output video: {output_path}")
+
+    # Precompute the adjusted homography (constant across all frames)
+    T = np.array([[1, 0, -offset_x],
+                  [0, 1, -offset_y],
+                  [0, 0, 1]], dtype=np.float64)
+    H_adjusted = T @ H
 
     # Step 4: Process frames
     print(f"Stitching {total_frames} frames at {fps:.1f} fps...")
@@ -294,7 +302,7 @@ def stitch_videos(left_path: str, right_path: str,
 
             stitched = stitch_frame(
                 frame_left, frame_right,
-                H, canvas_w, canvas_h,
+                H_adjusted, canvas_w, canvas_h,
                 offset_x, offset_y,
                 blend_start, blend_end
             )

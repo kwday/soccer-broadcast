@@ -330,23 +330,37 @@ class ScoreboardRenderer:
             return frame
 
         bgra = self.render_to_bgr(state)
-        alpha = bgra[:, :, 3].astype(np.float32) / 255.0
-        bgr = bgra[:, :, :3]
 
         # Resize overlay if frame size doesn't match
         h, w = frame.shape[:2]
         if bgra.shape[0] != h or bgra.shape[1] != w:
-            from PIL import Image
+            from PIL import Image as PILImage
             rgba_img = self.render(state)
-            rgba_img = rgba_img.resize((w, h), Image.LANCZOS)
+            rgba_img = rgba_img.resize((w, h), PILImage.LANCZOS)
             rgba_array = np.array(rgba_img)
             bgra = rgba_array[:, :, [2, 1, 0, 3]]
-            alpha = bgra[:, :, 3].astype(np.float32) / 255.0
-            bgr = bgra[:, :, :3]
 
-        # Alpha composite
-        alpha_3ch = alpha[:, :, np.newaxis]
-        result = (bgr.astype(np.float32) * alpha_3ch +
-                  frame.astype(np.float32) * (1 - alpha_3ch))
+        # Find bounding box of non-transparent pixels to avoid full-frame blend
+        alpha_full = bgra[:, :, 3]
+        rows_with_content = np.any(alpha_full > 0, axis=1)
+        cols_with_content = np.any(alpha_full > 0, axis=0)
 
-        return result.astype(np.uint8)
+        if not np.any(rows_with_content):
+            return frame
+
+        y0 = int(np.argmax(rows_with_content))
+        y1 = int(len(rows_with_content) - np.argmax(rows_with_content[::-1]))
+        x0 = int(np.argmax(cols_with_content))
+        x1 = int(len(cols_with_content) - np.argmax(cols_with_content[::-1]))
+
+        # Alpha composite only the scoreboard region
+        roi_alpha = alpha_full[y0:y1, x0:x1].astype(np.float32) / 255.0
+        alpha_3ch = roi_alpha[:, :, np.newaxis]
+        roi_bgr = bgra[y0:y1, x0:x1, :3].astype(np.float32)
+        roi_frame = frame[y0:y1, x0:x1].astype(np.float32)
+
+        blended = roi_bgr * alpha_3ch + roi_frame * (1 - alpha_3ch)
+        result = frame.copy()
+        result[y0:y1, x0:x1] = blended.astype(np.uint8)
+
+        return result

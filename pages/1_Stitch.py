@@ -18,6 +18,7 @@ import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from stitch import get_video_info, stitch_videos, detect_timecode_offset
+from calibrate import calibrate, extract_frame
 from app import render_sidebar, load_config
 
 
@@ -175,9 +176,24 @@ def main():
             progress_bar = st.progress(0, text="Starting...")
             status_text = st.empty()
 
+            stitch_start_time = None
+
             def on_progress(current, total):
                 pct = current / max(total, 1)
-                progress_bar.progress(pct, text=f"Stitching frame {current:,} / {total:,}")
+                elapsed = time.time() - stitch_start_time
+                if current > 0:
+                    eta_sec = elapsed / current * (total - current)
+                    eta_min = eta_sec / 60
+                    if eta_min >= 1:
+                        eta_str = f" — ~{eta_min:.0f} min remaining"
+                    else:
+                        eta_str = f" — ~{eta_sec:.0f}s remaining"
+                else:
+                    eta_str = ""
+                progress_bar.progress(
+                    pct,
+                    text=f"Stitching frame {current:,} / {total:,}{eta_str}"
+                )
 
             try:
                 # Determine frame offset
@@ -185,15 +201,36 @@ def main():
                     fps = left_info["fps"]
                     frame_offset = round(tc_offset * fps)
                 else:
-                    status_text.text("Syncing audio...")
+                    status_text.text("Syncing audio (extracting and cross-correlating)...")
                     from sync_audio import sync_audio
                     offset_sec = sync_audio(left_path, right_path)
                     frame_offset = round(offset_sec * left_info["fps"])
 
-                status_text.text("Calibrating...")
+                # --- Calibration with granular progress ---
+                from datetime import datetime as dt
+                cal_date = dt.now().strftime("%Y-%m-%d")
 
+                status_text.text("Calibrating — extracting frames...")
+                progress_bar.progress(0.02, text="Calibrating (step 1/4): extracting frames...")
+                img_left = extract_frame(left_path, 0)
+                img_right = extract_frame(right_path, 0)
+
+                status_text.text("Calibrating — detecting features (this may take a moment at 5.3K)...")
+                progress_bar.progress(0.05, text="Calibrating (step 2/4): detecting features...")
+                cal_data = calibrate(
+                    left_path, right_path,
+                    cal_date=cal_date, frame_index=0
+                )
+                cal_path = os.path.join("calibrations", f"{cal_date}_cal.json")
+
+                status_text.text("Calibration complete. Starting stitch...")
+                progress_bar.progress(0.10, text="Calibration done — starting stitch...")
+
+                # --- Stitch with ETA ---
+                stitch_start_time = time.time()
                 result = stitch_videos(
                     left_path, right_path, output_path,
+                    cal_path=cal_path,
                     frame_offset=frame_offset,
                     progress_callback=on_progress
                 )
